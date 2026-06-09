@@ -15,6 +15,7 @@ import Engineer from './pages/Engineer';
 
 import Accountant from './pages/Accountant';
 import Valuation from './pages/Valuation';
+import GramPanchayat from './pages/GramPanchayat';
 
 // Generic placeholder for the remaining reports/settings links
 const PlaceholderPage = ({ title }) => (
@@ -45,6 +46,7 @@ export default function App() {
 
           <Route path="accountant" element={<Accountant />} />
           <Route path="valuation" element={<Valuation />} />
+          <Route path="gram-panchayat" element={<GramPanchayat />} />
           
           {/* Reports */}
           <Route path="reports/financial" element={<PlaceholderPage title="Financial Summary Report" />} />
