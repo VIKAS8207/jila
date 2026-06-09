@@ -13,5 +13,5 @@ export const ROLE_ACCESS = {
   [ROLES.GRAM_PANCHAYAT]: 'FULL',
   [ROLES.ENGINEER]: 'LIMITED',
   [ROLES.SUB_ENGINEER]: 'LIMITED',
-  [ROLES.ACCOUNTANT]: 'FINANCE' // Unique access level just for Accountants
+  [ROLES.ACCOUNTANT]: 'FINANCE'
 };

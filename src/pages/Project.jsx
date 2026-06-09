@@ -332,7 +332,7 @@ export default function Project() {
                   <label className="text-sm font-medium text-gray-700">Initiating Department</label>
                   <select name="department" required value={formData.department} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
                     <option value="">Select Department</option>
-                    <option value="CO Jila Adhyaksh">CO Jila Adhyaksh</option>
+                    <option value="CO Jila Adhyaksh">CEO Jila Adhyaksh</option>
                     <option value="Janpad">Janpad</option>
                     <option value="Gram Panchayat">Gram Panchayat</option>
                   </select>
