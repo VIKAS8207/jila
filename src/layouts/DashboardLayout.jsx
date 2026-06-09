@@ -39,6 +39,7 @@ export default function DashboardLayout() {
       { name: 'Documentation', path: '/dashboard/documentation' },
       { name: 'Progress Update', path: '/dashboard/progress' },
       { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
+      { name: 'Valuation', path: '/dashboard/valuation' }, // NEW: Added here
       { name: 'Project Request', path: '/dashboard/project-request' },
       { name: 'Accountant Directory', path: '/dashboard/accountant' },
     ];
@@ -48,11 +49,13 @@ export default function DashboardLayout() {
       { name: 'Documentation', path: '/dashboard/documentation' },
       { name: 'Progress Update', path: '/dashboard/progress' },
       { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
+      { name: 'Valuation', path: '/dashboard/valuation' }, // NEW: Added here
       { name: 'Accountant Directory', path: '/dashboard/accountant' },
     ];
   } else if (isAccountant) {
     primaryLinks = [
       { name: 'Dashboard', path: '/dashboard' },
+      { name: 'Valuation', path: '/dashboard/valuation' }, // NEW: Added here
       { name: 'Accountant Directory', path: '/dashboard/accountant' },
     ];
   }
@@ -82,9 +85,15 @@ export default function DashboardLayout() {
         className={`fixed inset-y-0 right-0 z-50 w-64 bg-white border-l border-gray-200 flex flex-col transition-transform duration-300 ease-in-out transform lg:relative lg:translate-x-0 lg:border-l-0 lg:border-r ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900 tracking-wide">
-            PROJECT <span className="text-gray-500">MONITOR</span>
-          </h1>
+          <div className="  flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300">
+                    <img src="/images/shashan.png" alt="Logo" className="w-full h-full object-cover" />
+                  </div>
+          <div>
+    <h1 className="text-sm font-bold text-gray-900 leading-tight">CHHATTISGARH</h1>
+    <h1 className="text-sm font-bold text-gray-900 leading-tight">SHASHAN</h1>
+  </div>
+</div>
           <button onClick={closeMobileMenu} className="lg:hidden text-gray-400 hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
@@ -210,7 +219,6 @@ export default function DashboardLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-8">
-          {/* We pass down isAccountant to the Outlet so child pages know if finance is logged in */}
           <Outlet context={{ userRole, isFullAccess, isAccountant }} />
         </main>
       </div>
