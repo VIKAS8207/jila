@@ -6,7 +6,7 @@ export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isReportsOpen, setIsReportsOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userRole = location.state?.userRole;
 
@@ -14,33 +14,48 @@ export default function DashboardLayout() {
     return <Navigate to="/" replace />;
   }
 
-  const accessLevel = ROLE_ACCESS[userRole];
-  const isFullAccess = accessLevel === 'FULL';
-
-  const handleLogout = () => {
-    navigate('/', { replace: true });
-  };
-
   // Helper to close the mobile menu when a link is clicked
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const primaryLinks = isFullAccess 
-    ? [
-        { name: 'Dashboard', path: '/dashboard' },
-        { name: 'Project', path: '/dashboard/project' },
-        { name: 'Documentation', path: '/dashboard/documentation' },
-        { name: 'Progress Update', path: '/dashboard/progress' },
-        { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
-        { name: 'Project Request', path: '/dashboard/project-request' },
-      ]
-    : [
-        { name: 'Dashboard', path: '/dashboard' },
-        { name: 'Documentation', path: '/dashboard/documentation' },
-        { name: 'Progress Update', path: '/dashboard/progress' },
-        { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
-      ];
+  const handleLogout = () => {
+    navigate('/', { replace: true });
+  };
+
+  // --- ROLE BASED ACCESS LOGIC ---
+  const accessLevel = ROLE_ACCESS[userRole];
+  const isFullAccess = accessLevel === 'FULL';
+  const isLimitedAccess = accessLevel === 'LIMITED';
+  const isAccountant = accessLevel === 'FINANCE';
+
+  // --- DYNAMIC LINK GENERATION ---
+  let primaryLinks = [];
+
+  if (isFullAccess) {
+    primaryLinks = [
+      { name: 'Dashboard', path: '/dashboard' },
+      { name: 'Project', path: '/dashboard/project' },
+      { name: 'Documentation', path: '/dashboard/documentation' },
+      { name: 'Progress Update', path: '/dashboard/progress' },
+      { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
+      { name: 'Project Request', path: '/dashboard/project-request' },
+      { name: 'Accountant Directory', path: '/dashboard/accountant' },
+    ];
+  } else if (isLimitedAccess) {
+    primaryLinks = [
+      { name: 'Dashboard', path: '/dashboard' },
+      { name: 'Documentation', path: '/dashboard/documentation' },
+      { name: 'Progress Update', path: '/dashboard/progress' },
+      { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
+      { name: 'Accountant Directory', path: '/dashboard/accountant' },
+    ];
+  } else if (isAccountant) {
+    primaryLinks = [
+      { name: 'Dashboard', path: '/dashboard' },
+      { name: 'Accountant Directory', path: '/dashboard/accountant' },
+    ];
+  }
 
   const masterLinks = [
     { name: 'Scheme', path: '/dashboard/scheme' },
@@ -62,7 +77,7 @@ export default function DashboardLayout() {
         onClick={closeMobileMenu}
       />
 
-      {/* Side Navbar - Responsive (Fixed right on Mobile, Relative left on Desktop) */}
+      {/* Side Navbar - Responsive */}
       <aside 
         className={`fixed inset-y-0 right-0 z-50 w-64 bg-white border-l border-gray-200 flex flex-col transition-transform duration-300 ease-in-out transform lg:relative lg:translate-x-0 lg:border-l-0 lg:border-r ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
@@ -70,7 +85,6 @@ export default function DashboardLayout() {
           <h1 className="text-xl font-bold text-gray-900 tracking-wide">
             PROJECT <span className="text-gray-500">MONITOR</span>
           </h1>
-          {/* Close button inside sidebar for mobile */}
           <button onClick={closeMobileMenu} className="lg:hidden text-gray-400 hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
@@ -78,6 +92,7 @@ export default function DashboardLayout() {
         
         <nav className="flex-1 p-4 overflow-y-auto space-y-6">
           
+          {/* Primary Links */}
           <div className="space-y-1">
             {primaryLinks.map((link) => (
               <Link
@@ -92,6 +107,7 @@ export default function DashboardLayout() {
             ))}
           </div>
 
+          {/* Master & Reports - ONLY Full Access sees this */}
           {isFullAccess && (
             <>
               <div className="pt-4 border-t border-gray-200">
@@ -145,6 +161,7 @@ export default function DashboardLayout() {
           )}
         </nav>
 
+        {/* Footer Area */}
         <div className="p-4 border-t border-gray-200 space-y-4 bg-gray-50">
           <Link 
             to="/dashboard/settings" 
@@ -173,19 +190,15 @@ export default function DashboardLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        {/* Top Header */}
         <header className="bg-white border-b border-gray-200 px-4 sm:px-8 py-4 flex justify-between items-center z-30">
-          {/* Mobile Logo (Visible only on small screens) */}
           <div className="lg:hidden">
             <h1 className="text-xl font-bold text-gray-900 tracking-wide">
               PROJECT <span className="text-gray-500">MONITOR</span>
             </h1>
           </div>
           
-          {/* Desktop Title (Visible only on large screens) */}
           <h2 className="hidden lg:block text-lg font-semibold text-gray-800">System Overview</h2>
 
-          {/* Hamburger Menu Icon (Visible only on small screens) */}
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
             className="lg:hidden p-2 -mr-2 text-gray-600 hover:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
@@ -196,9 +209,9 @@ export default function DashboardLayout() {
           </button>
         </header>
 
-        {/* Dynamic Page Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-8">
-          <Outlet context={{ userRole, isFullAccess }} />
+          {/* We pass down isAccountant to the Outlet so child pages know if finance is logged in */}
+          <Outlet context={{ userRole, isFullAccess, isAccountant }} />
         </main>
       </div>
 

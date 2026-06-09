@@ -3,7 +3,8 @@ export const ROLES = {
   JANPAD: 'Janpad',
   GRAM_PANCHAYAT: 'Gram Panchayat',
   ENGINEER: 'Engineer',
-  SUB_ENGINEER: 'Sub-Engineer'
+  SUB_ENGINEER: 'Sub-Engineer',
+  ACCOUNTANT: 'Accountant'
 };
 
 export const ROLE_ACCESS = {
@@ -11,5 +12,6 @@ export const ROLE_ACCESS = {
   [ROLES.JANPAD]: 'FULL',
   [ROLES.GRAM_PANCHAYAT]: 'FULL',
   [ROLES.ENGINEER]: 'LIMITED',
-  [ROLES.SUB_ENGINEER]: 'LIMITED'
+  [ROLES.SUB_ENGINEER]: 'LIMITED',
+  [ROLES.ACCOUNTANT]: 'FINANCE' // Unique access level just for Accountants
 };

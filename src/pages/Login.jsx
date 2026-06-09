@@ -32,20 +32,24 @@ export default function Login() {
           <div className="w-full">
             <label className="block text-sm font-medium text-gray-400 mb-1.5">Designation / Role</label>
             <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-3.5 py-2.5 text-white focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm backdrop-blur-md appearance-none cursor-pointer"
-            >
-              <optgroup label="Administrative (Full Access)">
-                <option value={ROLES.CO_JILA_ADHYAKSH}>{ROLES.CO_JILA_ADHYAKSH}</option>
-                <option value={ROLES.JANPAD}>{ROLES.JANPAD}</option>
-                <option value={ROLES.GRAM_PANCHAYAT}>{ROLES.GRAM_PANCHAYAT}</option>
-              </optgroup>
-              <optgroup label="Technical (Limited Access)">
-                <option value={ROLES.ENGINEER}>{ROLES.ENGINEER}</option>
-                <option value={ROLES.SUB_ENGINEER}>{ROLES.SUB_ENGINEER}</option>
-              </optgroup>
-            </select>
+  value={role}
+  onChange={(e) => setRole(e.target.value)}
+  className="w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-3.5 py-2.5 text-white focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm backdrop-blur-md appearance-none cursor-pointer"
+>
+  <optgroup label="Administrative (Full Access)">
+    <option value={ROLES.CO_JILA_ADHYAKSH}>{ROLES.CO_JILA_ADHYAKSH}</option>
+    <option value={ROLES.JANPAD}>{ROLES.JANPAD}</option>
+    <option value={ROLES.GRAM_PANCHAYAT}>{ROLES.GRAM_PANCHAYAT}</option>
+  </optgroup>
+  <optgroup label="Technical (Limited Access)">
+    <option value={ROLES.ENGINEER}>{ROLES.ENGINEER}</option>
+    <option value={ROLES.SUB_ENGINEER}>{ROLES.SUB_ENGINEER}</option>
+  </optgroup>
+  {/* NEW: Finance Group */}
+  <optgroup label="Finance (Restricted Access)">
+    <option value={ROLES.ACCOUNTANT}>{ROLES.ACCOUNTANT}</option>
+  </optgroup>
+</select>
           </div>
 
           <div className="w-full">

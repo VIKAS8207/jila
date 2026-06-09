@@ -13,6 +13,8 @@ import ProjectRequest from './pages/ProjectRequest';
 import Scheme from './pages/Scheme';
 import Engineer from './pages/Engineer';
 
+import Accountant from './pages/Accountant';
+
 // Generic placeholder for the remaining reports/settings links
 const PlaceholderPage = ({ title }) => (
   <div className="bg-white p-6 border border-gray-200 rounded-xl shadow-sm">
@@ -39,6 +41,8 @@ export default function App() {
           {/* Master Configurations - Now Active! */}
           <Route path="scheme" element={<Scheme />} />
           <Route path="engineer" element={<Engineer />} />
+
+          <Route path="accountant" element={<Accountant />} />
           
           {/* Reports */}
           <Route path="reports/financial" element={<PlaceholderPage title="Financial Summary Report" />} />

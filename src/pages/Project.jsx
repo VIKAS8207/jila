@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Project() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Filter States
-  const [filterSector, setFilterSector] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
   const [filterScheme, setFilterScheme] = useState('');
+  const [filterSector, setFilterSector] = useState('');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  // Mock Data (Expanded to demonstrate pagination)
   const [projects, setProjects] = useState([
     {
       id: 1,
@@ -14,7 +20,7 @@ export default function Project() {
       agreementNo: 'AGR-2026-001',
       dateOfCreation: '2026-06-01',
       dueDate: '2026-12-01',
-      typeOfWork: 'Welfare',
+      sector: 'Welfare', 
       sanctionYear: '2025-2026',
       district: 'Raipur',
       cityTown: 'Raipur',
@@ -23,15 +29,105 @@ export default function Project() {
       contractor: 'BuildTech Corp',
       scheme: 'State Grant',
       subEngineer: 'R. Kumar',
-      sector: 'Janpad' // Added sector to mock data
+      department: 'Janpad' 
+    },
+    {
+      id: 2,
+      projectName: 'Primary School Renovation',
+      agreementNo: 'AGR-2026-002',
+      dateOfCreation: '2026-05-15',
+      dueDate: '2026-10-15',
+      sector: 'Education',
+      sanctionYear: '2025-2026',
+      district: 'Raipur',
+      cityTown: 'Abhanpur',
+      gpWard: 'Ward 12',
+      totalArea: '2000',
+      contractor: 'EduBuild Pvt',
+      scheme: 'Central Fund',
+      subEngineer: 'S. Singh',
+      department: 'CO Jila Adhyaksh'
+    },
+    {
+      id: 3,
+      projectName: 'Village Water Tank',
+      agreementNo: 'AGR-2026-003',
+      dateOfCreation: '2026-06-10',
+      dueDate: '2026-09-30',
+      sector: 'Infrastructure',
+      sanctionYear: '2026-2027',
+      district: 'Raipur',
+      cityTown: 'Arang',
+      gpWard: 'Ward 3',
+      totalArea: '500',
+      contractor: 'AquaFlow Ind',
+      scheme: 'Jal Jeevan Mission',
+      subEngineer: 'A. Patel',
+      department: 'Gram Panchayat'
+    },
+    {
+      id: 4,
+      projectName: 'Rural Dispensary',
+      agreementNo: 'AGR-2026-004',
+      dateOfCreation: '2026-04-20',
+      dueDate: '2026-11-20',
+      sector: 'Health',
+      sanctionYear: '2025-2026',
+      district: 'Raipur',
+      cityTown: 'Tilda',
+      gpWard: 'Ward 8',
+      totalArea: '1200',
+      contractor: 'MediCorp Builders',
+      scheme: 'State Grant',
+      subEngineer: 'R. Kumar',
+      department: 'Janpad'
+    },
+    {
+      id: 5,
+      projectName: 'Connecting Road Extension',
+      agreementNo: 'AGR-2026-005',
+      dateOfCreation: '2026-03-05',
+      dueDate: '2026-08-15',
+      sector: 'Infrastructure',
+      sanctionYear: '2025-2026',
+      district: 'Raipur',
+      cityTown: 'Abhanpur',
+      gpWard: 'Ward 2',
+      totalArea: '5000',
+      contractor: 'Roadways Ltd',
+      scheme: 'PMGSY',
+      subEngineer: 'V. Sharma',
+      department: 'CO Jila Adhyaksh'
+    },
+    {
+      id: 6,
+      projectName: 'Panchayat Solar Lights',
+      agreementNo: 'AGR-2026-006',
+      dateOfCreation: '2026-06-05',
+      dueDate: '2026-07-20',
+      sector: 'Infrastructure',
+      sanctionYear: '2026-2027',
+      district: 'Raipur',
+      cityTown: 'Arang',
+      gpWard: 'Ward 5',
+      totalArea: 'N/A',
+      contractor: 'SunPower Co',
+      scheme: 'Local Body',
+      subEngineer: 'S. Singh',
+      department: 'Gram Panchayat'
     }
   ]);
 
   const [formData, setFormData] = useState({
     projectName: '', agreementNo: '', dateOfCreation: '', dueDate: '',
-    typeOfWork: '', sanctionYear: '', district: '', cityTown: '',
-    gpWard: '', totalArea: '', contractor: '', scheme: '', subEngineer: '', sector: ''
+    sector: '', sanctionYear: '', district: '', cityTown: '',
+    gpWard: '', totalArea: '', contractor: '', scheme: '', subEngineer: '', department: ''
   });
+
+  // Reset pagination to page 1 whenever a filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterDepartment, filterScheme, filterSector]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -44,20 +140,34 @@ export default function Project() {
     setIsModalOpen(false);
     setFormData({ 
       projectName: '', agreementNo: '', dateOfCreation: '', dueDate: '',
-      typeOfWork: '', sanctionYear: '', district: '', cityTown: '',
-      gpWard: '', totalArea: '', contractor: '', scheme: '', subEngineer: '', sector: ''
+      sector: '', sanctionYear: '', district: '', cityTown: '',
+      gpWard: '', totalArea: '', contractor: '', scheme: '', subEngineer: '', department: ''
     });
   };
 
-  // Filter Logic
+  // 1. Filter Logic
   const filteredProjects = projects.filter(proj => {
-    const matchSector = filterSector === '' || proj.sector === filterSector;
+    const matchDepartment = filterDepartment === '' || proj.department === filterDepartment;
     const matchScheme = filterScheme === '' || proj.scheme === filterScheme;
-    return matchSector && matchScheme;
+    const matchSector = filterSector === '' || proj.sector === filterSector;
+    return matchDepartment && matchScheme && matchSector;
   });
 
-  // Extract unique schemes for the filter dropdown dynamically
+  // 2. Pagination Logic
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  const currentData = filteredProjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
+  // Extract unique values for dropdowns dynamically
   const uniqueSchemes = [...new Set(projects.map(p => p.scheme))];
+  const uniqueSectors = [...new Set(projects.map(p => p.sector))];
 
   return (
     <div className="space-y-6">
@@ -70,69 +180,82 @@ export default function Project() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shrink-0"
+          className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shrink-0 shadow-sm"
         >
           + New Project
         </button>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm flex flex-col sm:flex-row gap-4 items-center">
+      <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
         <span className="text-sm font-bold text-gray-700 shrink-0">Filter By:</span>
         
-        <select 
-          value={filterSector} 
-          onChange={(e) => setFilterSector(e.target.value)}
-          className="w-full sm:w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
-        >
-          <option value="">All Sectors</option>
-          <option value="CO Jila Adhyaksh">CO Jila Adhyaksh</option>
-          <option value="Janpad">Janpad</option>
-          <option value="Gram Panchayat">Gram Panchayat</option>
-        </select>
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+          <select 
+            value={filterDepartment} 
+            onChange={(e) => setFilterDepartment(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
+          >
+            <option value="">All Departments</option>
+            <option value="CO Jila Adhyaksh">CO Jila Adhyaksh</option>
+            <option value="Janpad">Janpad</option>
+            <option value="Gram Panchayat">Gram Panchayat</option>
+          </select>
 
-        <select 
-          value={filterScheme} 
-          onChange={(e) => setFilterScheme(e.target.value)}
-          className="w-full sm:w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
-        >
-          <option value="">All Schemes</option>
-          {uniqueSchemes.map((scheme, idx) => (
-            <option key={idx} value={scheme}>{scheme}</option>
-          ))}
-        </select>
+          <select 
+            value={filterScheme} 
+            onChange={(e) => setFilterScheme(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
+          >
+            <option value="">All Schemes</option>
+            {uniqueSchemes.map((scheme, idx) => (
+              <option key={idx} value={scheme}>{scheme}</option>
+            ))}
+          </select>
+
+          <select 
+            value={filterSector} 
+            onChange={(e) => setFilterSector(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
+          >
+            <option value="">All Sectors (Work)</option>
+            {uniqueSectors.map((sector, idx) => (
+              <option key={idx} value={sector}>{sector}</option>
+            ))}
+          </select>
+        </div>
         
-        {(filterSector || filterScheme) && (
+        {(filterDepartment || filterScheme || filterSector) && (
           <button 
-            onClick={() => { setFilterSector(''); setFilterScheme(''); }}
-            className="text-sm text-gray-500 hover:text-gray-900 underline underline-offset-2 ml-auto"
+            onClick={() => { setFilterDepartment(''); setFilterScheme(''); setFilterSector(''); }}
+            className="text-sm text-gray-500 hover:text-gray-900 underline underline-offset-2 shrink-0"
           >
             Clear Filters
           </button>
         )}
       </div>
 
-      {/* Data Table */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      {/* Data Table & Pagination Container */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 font-semibold text-gray-700">Project Name</th>
-                <th className="px-6 py-3 font-semibold text-gray-700">Sector</th>
+                <th className="px-6 py-3 font-semibold text-gray-700">Department</th>
                 <th className="px-6 py-3 font-semibold text-gray-700">Scheme</th>
-                <th className="px-6 py-3 font-semibold text-gray-700">Type</th>
+                <th className="px-6 py-3 font-semibold text-gray-700">Sector</th>
                 <th className="px-6 py-3 font-semibold text-gray-700">Due Date</th>
                 <th className="px-6 py-3 font-semibold text-gray-700">Sub Engineer</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredProjects.length === 0 ? (
+              {currentData.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-8 text-center text-gray-500">No projects match the selected filters.</td>
                 </tr>
               ) : (
-                filteredProjects.map((proj) => (
+                currentData.map((proj) => (
                   <tr key={proj.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <p className="font-bold text-gray-900">{proj.projectName}</p>
@@ -140,11 +263,11 @@ export default function Project() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                        {proj.sector}
+                        {proj.department}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-700 font-medium">{proj.scheme}</td>
-                    <td className="px-6 py-4 text-gray-600">{proj.typeOfWork}</td>
+                    <td className="px-6 py-4 text-gray-600">{proj.sector}</td>
                     <td className="px-6 py-4 text-gray-600">{proj.dueDate}</td>
                     <td className="px-6 py-4 text-gray-600">{proj.subEngineer}</td>
                   </tr>
@@ -152,6 +275,32 @@ export default function Project() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Showing <span className="font-medium text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</span> of <span className="font-medium text-gray-900">{filteredProjects.length}</span> results
+          </p>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handlePrevPage} 
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-700 font-medium px-2">
+              Page {currentPage} of {totalPages || 1}
+            </span>
+            <button 
+              onClick={handleNextPage} 
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
@@ -166,7 +315,6 @@ export default function Project() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6">
-              {/* Form Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 
                 <div className="space-y-1">
@@ -179,11 +327,11 @@ export default function Project() {
                   <input type="text" name="agreementNo" required value={formData.agreementNo} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
                 </div>
 
-                {/* NEW SECTOR FIELD */}
+                {/* UPDATED: Department Field (previously Sector) */}
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Sector</label>
-                  <select name="sector" required value={formData.sector} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
-                    <option value="">Select Sector</option>
+                  <label className="text-sm font-medium text-gray-700">Initiating Department</label>
+                  <select name="department" required value={formData.department} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
+                    <option value="">Select Department</option>
                     <option value="CO Jila Adhyaksh">CO Jila Adhyaksh</option>
                     <option value="Janpad">Janpad</option>
                     <option value="Gram Panchayat">Gram Panchayat</option>
@@ -202,10 +350,11 @@ export default function Project() {
                   </select>
                 </div>
 
+                {/* UPDATED: Sector Field (previously Type of Work) */}
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Type of Work</label>
-                  <select name="typeOfWork" required value={formData.typeOfWork} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
-                    <option value="">Select Type</option>
+                  <label className="text-sm font-medium text-gray-700">Sector (Type of Work)</label>
+                  <select name="sector" required value={formData.sector} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
+                    <option value="">Select Sector</option>
                     <option value="Welfare">Welfare</option>
                     <option value="Education">Education</option>
                     <option value="Health">Health</option>
