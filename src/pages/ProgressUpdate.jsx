@@ -168,6 +168,7 @@ export default function ProgressUpdate() {
   if (currentView === 'list') {
     return (
       <div className="space-y-6 pb-10">
+      
         <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Welcome, {userName}</h2>

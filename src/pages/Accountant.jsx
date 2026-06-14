@@ -1,388 +1,408 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useOutletContext } from 'react-router-dom';
+
+// --- REUSABLE CUSTOM DROPDOWN ---
+const CustomDropdown = ({ options, value, onChange, placeholder, disabled = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`relative w-full ${disabled ? 'opacity-50 pointer-events-none' : ''}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between px-5 py-3.5 rounded-full text-sm font-bold transition-all duration-200 border ${
+          isOpen ? 'bg-[#451db3]/10 border-[#451db3] text-[#451db3] shadow-inner' : 'bg-white border-slate-200 text-slate-700 hover:border-[#451db3]/50 focus:ring-2 focus:ring-[#451db3]/20 shadow-[0_2px_10px_rgba(0,0,0,0.03)]'
+        }`}
+      >
+        <span className="truncate">{value || placeholder}</span>
+        <svg className={`w-4 h-4 ml-3 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#451db3]' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-2xl border border-slate-100 rounded-2xl shadow-[0_10px_40px_rgba(69,29,179,0.15)] overflow-hidden animate-in fade-in zoom-in-95 py-2">
+          <ul className="max-h-60 overflow-y-auto px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <li 
+              onClick={() => { onChange(''); setIsOpen(false); }}
+              className={`px-4 py-3 my-1 text-sm font-bold rounded-xl cursor-pointer transition-colors ${value === '' ? 'bg-[#451db3] text-white' : 'text-slate-600 hover:bg-[#451db3]/10 hover:text-[#451db3]'}`}
+            >
+              {placeholder}
+            </li>
+            {options.map((opt, idx) => (
+              <li 
+                key={idx}
+                onClick={() => { onChange(opt); setIsOpen(false); }}
+                className={`px-4 py-3 my-1 text-sm font-bold rounded-xl cursor-pointer transition-colors ${value === opt ? 'bg-[#451db3] text-white' : 'text-slate-600 hover:bg-[#451db3]/10 hover:text-[#451db3]'}`}
+              >
+                {opt}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Accountant() {
-  const [currentView, setCurrentView] = useState('list'); // 'list', 'detail'
-  const [activeProject, setActiveProject] = useState(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [showInvoice, setShowInvoice] = useState(false);
+  const { userRole } = useOutletContext(); 
+
+  // --- MOCK DATA: DEMANDS AWAITING PAYMENT ---
+  const [demands, setDemands] = useState([
+    { id: 1, workId: 'WRK-2026-800', workName: 'Road Development Ward 4', approvedBy: 'Janpad', destination: 'Gram Panchayat (Uslapur)', amount: 500000, installment: '1st Installment', status: 'Pending' },
+    { id: 2, workId: 'WRK-2026-801', workName: 'Panchayat Solar Expansion', approvedBy: 'CEO Jila Panchayat', destination: 'SunPower Co.', amount: 250000, installment: '1st Installment', status: 'Pending' },
+    { id: 3, workId: 'WRK-2026-800', workName: 'Road Development Ward 4', approvedBy: 'Janpad', destination: 'Gram Panchayat (Uslapur)', amount: 200000, installment: '2nd Installment', status: 'Pending' }, // Notice same Work ID to simulate 2nd installment
+    { id: 4, workId: 'WRK-2026-802', workName: 'Rural Dispensary Block A', approvedBy: 'CEO Jila Panchayat', destination: 'MediCorp Builders', amount: 850000, installment: 'Final Payment', status: 'Paid' },
+  ]);
+
+  // --- MOCK DATA: SAVED BANK DETAILS (Auto-fill for 2nd/3rd installments) ---
+  const [savedBankDetails, setSavedBankDetails] = useState({
+    'WRK-2026-802': { senderBank: 'SBI Zila Parishad', senderAcc: '30291188321', receiverBank: 'HDFC MediCorp', receiverAcc: '5010029384' }
+  });
+
+  // States
+  const [view, setView] = useState('list'); // 'list' | 'paymentForm'
+  const [activeDemand, setActiveDemand] = useState(null);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  
+  // Payment Form State
+  const [paymentForm, setPaymentForm] = useState({ senderBank: '', senderAcc: '', receiverBank: '', receiverAcc: '' });
+  
+  const [confirmModal, setConfirmModal] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Form State
-  const [formData, setFormData] = useState({
-    amount: '',
-    sender: '',
-    receiver: '',
-    description: '',
-    fundType: 'Standard Allocation', // e.g., Internal Fund, Emergency
-    paymentType: 'Full Payment', // e.g., Installment 1, Final Payment
-    document: null
+  const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ show: true, message: msg, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+  };
+
+  // --- FILTERING & PAGINATION ---
+  const filteredDemands = demands.filter(d => {
+    const matchesSearch = d.workName.toLowerCase().includes(searchQuery.toLowerCase()) || d.workId.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === '' || d.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  // Latest created transaction for the invoice view
-  const [lastTransaction, setLastTransaction] = useState(null);
-
-  // Mock Database: Projects (Expanded for Pagination)
-  const [projects] = useState([
-    { id: 1, sno: 'PRJ-001', name: 'Sample Community Hall', block: 'Raipur Block A', totalBudget: 500000, disbursed: 200000 },
-    { id: 2, sno: 'PRJ-002', name: 'Primary School Renovation', block: 'Abhanpur', totalBudget: 800000, disbursed: 800000 },
-    { id: 3, sno: 'PRJ-003', name: 'Road Construction Ward 45', block: 'Arang', totalBudget: 1200000, disbursed: 600000 },
-    { id: 4, sno: 'PRJ-004', name: 'Village Dispensary Unit', block: 'Tilda', totalBudget: 450000, disbursed: 450000 },
-    { id: 5, sno: 'PRJ-005', name: 'Panchayat Solar Grid', block: 'Arang', totalBudget: 950000, disbursed: 300000 },
-    { id: 6, sno: 'PRJ-006', name: 'Connecting Bridge Phase 1', block: 'Raipur Block A', totalBudget: 2500000, disbursed: 1000000 },
-    { id: 7, sno: 'PRJ-007', name: 'Community Water Tank', block: 'Abhanpur', totalBudget: 300000, disbursed: 150000 },
-  ]);
-
-  // Mock Database: Transactions mapped by Project ID
-  const [transactions, setTransactions] = useState({
-    1: [
-      { id: 'TRX-9901', date: '2026-05-15', amount: 200000, sender: 'CO Jila Adhyaksh (Central A/C: ****4432)', receiver: 'Janpad Panchayat (A/C: ****8891)', type: 'Installment 1', fundType: 'Standard Allocation', desc: 'Initial mobilization advance.' }
-    ]
-  });
-
-  // Pagination Logic
-  const totalPages = Math.ceil(projects.length / itemsPerPage);
-  const currentData = projects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filteredDemands.length / itemsPerPage);
+  const currentData = filteredDemands.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
 
-  // Action Handlers
-  const handleOpenDetail = (project) => {
-    setActiveProject(project);
-    setCurrentView('detail');
-    setIsFormOpen(false);
-    setShowInvoice(false);
-  };
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter]);
 
-  const handleBack = () => {
-    setActiveProject(null);
-    setCurrentView('list');
-    setIsFormOpen(false);
-    setShowInvoice(false);
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleProcessTransaction = (e) => {
-    e.preventDefault();
+  // --- ACTIONS ---
+  const handleInitiatePayment = (demand) => {
+    setActiveDemand(demand);
     
-    // Auto-generate mock account strings based on selection
-    const getAccountString = (entity) => {
-      if (entity === 'CO Jila Adhyaksh') return `${entity} (Central A/C: ****4432)`;
-      if (entity === 'Janpad') return `${entity} (A/C: ****8891)`;
-      if (entity === 'Gram Panchayat') return `${entity} (A/C: ****5521)`;
-      if (entity === 'Contractor / Engineer Firm') return `${entity} (Firm A/C: ****1109)`;
-      return entity;
-    };
+    // Auto-fill logic if bank details for this project exist
+    if (savedBankDetails[demand.workId]) {
+      setPaymentForm(savedBankDetails[demand.workId]);
+    } else {
+      setPaymentForm({ senderBank: '', senderAcc: '', receiverBank: '', receiverAcc: '' });
+    }
+    setView('paymentForm');
+  };
 
-    const newTrx = {
-      id: `TRX-${Math.floor(Math.random() * 9000) + 1000}`,
-      date: new Date().toISOString().split('T')[0],
-      amount: parseInt(formData.amount),
-      sender: getAccountString(formData.sender),
-      receiver: getAccountString(formData.receiver),
-      type: formData.paymentType,
-      fundType: formData.fundType,
-      desc: formData.description
-    };
+  const handleReviewPayment = (e) => {
+    e.preventDefault();
+    setConfirmModal(true); // Open the final confirmation popup
+  };
 
-    // Update history
-    setTransactions({
-      ...transactions,
-      [activeProject.id]: [newTrx, ...(transactions[activeProject.id] || [])]
+  const executePayment = () => {
+    // 1. Update the demand status to 'Paid'
+    setDemands(demands.map(d => d.id === activeDemand.id ? { ...d, status: 'Paid' } : d));
+    
+    // 2. Save/Update the bank details for future installments of this project
+    setSavedBankDetails({
+      ...savedBankDetails,
+      [activeDemand.workId]: paymentForm
     });
 
-    setLastTransaction(newTrx);
-    setIsFormOpen(false);
-    setShowInvoice(true); // Show success invoice
-
-    // Reset Form
-    setFormData({ amount: '', sender: '', receiver: '', description: '', fundType: 'Standard Allocation', paymentType: 'Full Payment', document: null });
+    setConfirmModal(false);
+    showToast('Payment Processed & Disbursed Successfully!', 'success');
+    setView('list');
+    setActiveDemand(null);
   };
 
-  // --- RENDER: LIST VIEW ---
-  if (currentView === 'list') {
-    return (
-      <div className="space-y-6 pb-10">
-        <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900">Financial Ledger Portal</h2>
-          <p className="text-sm text-gray-500">Select a project to manage fund transfers and view transaction histories.</p>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 font-semibold text-gray-700">Project Name</th>
-                  <th className="px-6 py-3 font-semibold text-gray-700">Block / Location</th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">Total Budget</th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">Total Disbursed</th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {currentData.map((proj) => (
-                  <tr key={proj.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-900">{proj.name}</p>
-                      <p className="text-xs text-gray-500 font-mono">{proj.sno}</p>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{proj.block}</td>
-                    <td className="px-6 py-4 text-gray-900 font-medium text-right">₹{proj.totalBudget.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-gray-600 text-right">₹{proj.disbursed.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button onClick={() => handleOpenDetail(proj)} className="text-sm font-bold text-gray-900 bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-                        Manage Funds
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* Pagination Controls */}
-          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Showing <span className="font-medium text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * itemsPerPage, projects.length)}</span> of <span className="font-medium text-gray-900">{projects.length}</span> results
-            </p>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={handlePrevPage} disabled={currentPage === 1}
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-700 font-medium px-2">Page {currentPage} of {totalPages || 1}</span>
-              <button 
-                onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0}
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- RENDER: DETAIL VIEW ---
-  const currentHistory = transactions[activeProject.id] || [];
+  const inputClass = "w-full rounded-full border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 transition-all outline-none shadow-[0_2px_10px_rgba(0,0,0,0.03)]";
 
   return (
-    <div className="max-w-5xl mx-auto pb-10 space-y-6">
+    <div className="space-y-6 pb-10 relative">
       
-      {/* Header - Movable, removed sticky classes */}
-      <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <button onClick={handleBack} className="text-gray-500 hover:text-gray-900 text-sm font-medium mb-2 block">← Back to Ledger</button>
-          <h2 className="text-xl font-bold text-gray-900">{activeProject.name}</h2>
-          <p className="text-sm text-gray-500 font-mono">{activeProject.sno}</p>
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom-6 fade-in">
+          <div className="bg-white px-6 py-4 rounded-full shadow-2xl border border-green-100 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span className="font-bold text-slate-800">{toast.message}</span>
+          </div>
         </div>
-        <button 
-          onClick={() => { setIsFormOpen(true); setShowInvoice(false); }}
-          className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm w-full sm:w-auto"
-        >
-          + Process Transaction
-        </button>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in zoom-in-95 p-8">
+            <div className="w-16 h-16 bg-[#451db3]/10 text-[#451db3] rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 mb-2 text-center">Confirm Disbursement</h3>
+            <p className="text-sm font-medium text-slate-500 mb-6 text-center">Please verify the routing details before finalizing the transaction.</p>
+            
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                <span className="text-xs font-bold text-slate-400 uppercase">Amount</span>
+                <span className="text-xl font-black text-[#451db3]">{formatCurrency(activeDemand.amount)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">From (Sender)</p>
+                  <p className="font-bold text-slate-800 text-sm mt-1">{paymentForm.senderBank}</p>
+                  <p className="font-mono text-xs text-slate-500">{paymentForm.senderAcc}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">To (Receiver)</p>
+                  <p className="font-bold text-slate-800 text-sm mt-1">{paymentForm.receiverBank}</p>
+                  <p className="font-mono text-xs text-slate-500">{paymentForm.receiverAcc}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 w-full">
+              <button onClick={() => setConfirmModal(false)} className="flex-1 py-3.5 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors">Edit Details</button>
+              <button onClick={executePayment} className="flex-1 py-3.5 rounded-full bg-[#451db3] text-white font-bold hover:bg-[#3a1796] shadow-[0_8px_20px_rgba(69,29,179,0.25)] transition-all">Proceed to Pay ✓</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 tracking-wide">Financial Disbursal</h2>
+          <p className="text-sm font-medium text-slate-500 mt-1">Review approved demands and securely process fund transfers.</p>
+        </div>
+        {view === 'paymentForm' && (
+          <button onClick={() => setView('list')} className="text-sm font-bold text-slate-400 hover:text-[#451db3] transition-colors">
+            ← Back to List
+          </button>
+        )}
       </div>
 
-      {/* Transaction Form Modal */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white border border-gray-300 rounded-xl shadow-xl w-full max-w-2xl my-8 animate-in fade-in zoom-in-95">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center rounded-t-xl">
-              <h3 className="font-bold text-gray-900 text-lg">Initiate Fund Transfer</h3>
-              <button onClick={() => setIsFormOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      {/* ======================================================= */}
+      {/* VIEW: LIST PENDING / PAID DEMANDS */}
+      {/* ======================================================= */}
+      {view === 'list' && (
+        <>
+          <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative">
+            <div className="flex-1 w-full relative">
+              <input 
+                type="text" 
+                placeholder="Search by Work ID or Project Name..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-full border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 outline-none shadow-sm transition-all" 
+              />
             </div>
-            <form onSubmit={handleProcessTransaction} className="p-6 space-y-6">
+            <div className="w-full md:w-64 shrink-0">
+              <CustomDropdown 
+                placeholder="All Statuses"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={['Pending', 'Paid']}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-in fade-in z-10 relative">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left border-collapse whitespace-nowrap">
+                <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
+                  <tr>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">S.No</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Project Details</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Approved By</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Destination</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Installment</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-right">Amount</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {currentData.length === 0 ? (
+                    <tr><td colSpan="7" className="px-8 py-12 text-center text-slate-500 font-bold">No demands match your filters.</td></tr>
+                  ) : (
+                    currentData.map((demand, index) => (
+                      <tr key={demand.id} className="hover:bg-[#451db3]/5 transition-colors group text-sm">
+                        <td className="px-5 py-5 font-bold text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                        <td className="px-5 py-5">
+                          <p className="font-bold text-slate-900">{demand.workName}</p>
+                          <p className="text-[11px] font-mono font-bold text-[#451db3] mt-1">{demand.workId}</p>
+                        </td>
+                        <td className="px-5 py-5 font-bold text-slate-600">{demand.approvedBy}</td>
+                        <td className="px-5 py-5 font-bold text-slate-700">{demand.destination}</td>
+                        <td className="px-5 py-5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                            {demand.installment}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 font-black text-slate-900 text-right">{formatCurrency(demand.amount)}</td>
+                        <td className="px-5 py-5 text-center">
+                          {demand.status === 'Pending' ? (
+                            <button 
+                              onClick={() => handleInitiatePayment(demand)}
+                              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-[11px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all shadow-[0_4px_10px_rgba(69,29,179,0.2)]"
+                            >
+                              Process Payment
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-600 border border-green-200">
+                              Paid ✓
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredDemands.length)}</span> of <span className="text-[#451db3]">{filteredDemands.length}</span>
+              </p>
+              <div className="flex items-center gap-3">
+                <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Prev</button>
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#451db3]/10 text-[#451db3] font-black text-xs">{currentPage}</div>
+                <button onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Next</button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ======================================================= */}
+      {/* VIEW: PAYMENT FORM */}
+      {/* ======================================================= */}
+      {view === 'paymentForm' && activeDemand && (
+        <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-10 animate-in slide-in-from-right-8 duration-500 overflow-visible flex flex-col gap-10">
+          
+          {/* Top Panel: Demand Summary */}
+          <div className="bg-[#451db3]/5 border border-[#451db3]/10 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <p className="text-[10px] font-bold text-[#451db3] uppercase tracking-widest mb-1">Approved For Disbursement</p>
+              <h3 className="text-2xl font-black text-slate-900">{activeDemand.workName}</h3>
+              <p className="font-mono font-bold text-slate-500 mt-1">{activeDemand.workId} | {activeDemand.installment}</p>
+            </div>
+            <div className="bg-white border-2 border-[#451db3]/20 rounded-2xl p-5 shadow-sm min-w-[200px] text-right">
+              <p className="text-[10px] font-black text-[#451db3] uppercase tracking-widest mb-1">Total Amount Due</p>
+              <p className="text-3xl font-black text-slate-900">{formatCurrency(activeDemand.amount)}</p>
+            </div>
+          </div>
+
+          {/* Bottom Panel: Banking Details Form */}
+          <div className="flex flex-col justify-start">
+            <div className="mb-8 px-2 flex justify-between items-center">
+              <h3 className="text-2xl font-black text-slate-800">Banking & Routing Details</h3>
+              {savedBankDetails[activeDemand.workId] && (
+                <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full">
+                  Auto-filled from previous installment ✓
+                </span>
+              )}
+            </div>
+            
+            <form onSubmit={handleReviewPayment} className="space-y-8">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 border border-gray-200 bg-gray-50/50 rounded-xl">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 block">Transfer Amount (₹)</label>
-                  <input type="number" name="amount" required value={formData.amount} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 outline-none focus:border-gray-500 text-lg font-medium" placeholder="0.00" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                
+                {/* SENDER DETAILS */}
+                <div className="space-y-6 bg-slate-50/50 border border-slate-100 p-6 rounded-3xl">
+                  <h4 className="text-sm font-black text-[#451db3] uppercase tracking-widest border-b border-slate-200 pb-2">Sender Information (Source)</h4>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sender Bank Name <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" required placeholder="e.g. SBI Zila Parishad"
+                      value={paymentForm.senderBank}
+                      onChange={e => setPaymentForm({...paymentForm, senderBank: e.target.value})}
+                      className={inputClass} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sender Account Number <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" required placeholder="Account No."
+                      value={paymentForm.senderAcc}
+                      onChange={e => setPaymentForm({...paymentForm, senderAcc: e.target.value})}
+                      className={inputClass} 
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 block">Fund Category</label>
-                  <select name="fundType" value={formData.fundType} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-500 bg-white">
-                    <option value="Standard Allocation">Standard Allocation</option>
-                    <option value="Internal Fund">Internal Department Fund</option>
-                    <option value="Emergency Reserve">Emergency Reserve</option>
-                  </select>
+
+                {/* RECEIVER DETAILS */}
+                <div className="space-y-6 bg-slate-50/50 border border-slate-100 p-6 rounded-3xl">
+                  <h4 className="text-sm font-black text-[#451db3] uppercase tracking-widest border-b border-slate-200 pb-2">Receiver Information (Destination)</h4>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Receiver Bank Name <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" required placeholder="e.g. HDFC Gram Panchayat"
+                      value={paymentForm.receiverBank}
+                      onChange={e => setPaymentForm({...paymentForm, receiverBank: e.target.value})}
+                      className={inputClass} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Receiver Account Number <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" required placeholder="Account No."
+                      value={paymentForm.receiverAcc}
+                      onChange={e => setPaymentForm({...paymentForm, receiverAcc: e.target.value})}
+                      className={inputClass} 
+                    />
+                  </div>
                 </div>
+
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 block">From (Sender)</label>
-                  <select name="sender" required value={formData.sender} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-500 bg-white">
-                    <option value="">Select Origin Account</option>
-                    <option value="CO Jila Adhyaksh">CO Jila Adhyaksh</option>
-                    <option value="Janpad">Janpad</option>
-                    <option value="Gram Panchayat">Gram Panchayat</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 block">To (Receiver)</label>
-                  <select name="receiver" required value={formData.receiver} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-500 bg-white">
-                    <option value="">Select Destination Account</option>
-                    <option value="Janpad">Janpad</option>
-                    <option value="Gram Panchayat">Gram Panchayat</option>
-                    <option value="Contractor / Engineer Firm">Contractor / Engineer Firm</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 block">Payment Type</label>
-                  <select name="paymentType" required value={formData.paymentType} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-500 bg-white">
-                    <option value="Full Payment">Full Payment</option>
-                    <option value="Installment 1">Installment 1</option>
-                    <option value="Installment 2">Installment 2</option>
-                    <option value="Final Settlement">Final Settlement</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700 block">Supporting Bill / Invoice</label>
-                  <input type="file" accept=".pdf,image/*" onChange={(e) => setFormData({...formData, document: e.target.files[0]})} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" required />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700 block">Transaction Description</label>
-                <textarea name="description" required value={formData.description} onChange={handleChange} rows="2" placeholder="Purpose of this transfer..." className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-500"></textarea>
-              </div>
-
-              <div className="flex justify-end pt-4 border-t border-gray-100 gap-3">
-                <button type="button" onClick={() => setIsFormOpen(false)} className="w-full sm:w-auto px-6 py-3 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" className="w-full sm:w-auto px-8 py-3 text-sm font-bold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shadow-sm">
-                  Authorize & Process
+              {/* Submit Button */}
+              <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-400 max-w-sm">Please verify account numbers carefully. Disbursals cannot be reversed automatically.</p>
+                <button 
+                  type="submit" 
+                  className="px-12 py-4 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-sm font-bold shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:-translate-y-0.5 transition-all"
+                >
+                  Review Details & Proceed
                 </button>
               </div>
+
             </form>
           </div>
+
         </div>
       )}
-
-      {/* Generated Invoice View */}
-      {showInvoice && lastTransaction && (
-        <div className="bg-white border-2 border-gray-900 rounded-xl shadow-lg p-8 animate-in zoom-in-95">
-          <div className="flex justify-between items-start border-b-2 border-gray-100 pb-6 mb-6">
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900 uppercase tracking-widest">Payment Invoice</h3>
-              <p className="text-sm text-gray-500 mt-1">Official Transfer Receipt</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-gray-900">{lastTransaction.id}</p>
-              <p className="text-sm text-gray-500">{lastTransaction.date}</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase mb-2">Transferred From</p>
-              <p className="font-medium text-gray-900">{lastTransaction.sender.split(' (')[0]}</p>
-              <p className="text-sm text-gray-500 font-mono mt-1">{lastTransaction.sender.match(/\(([^)]+)\)/)?.[1]}</p>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase mb-2">Transferred To</p>
-              <p className="font-medium text-gray-900">{lastTransaction.receiver.split(' (')[0]}</p>
-              <p className="text-sm text-gray-500 font-mono mt-1">{lastTransaction.receiver.match(/\(([^)]+)\)/)?.[1]}</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6">
-            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
-              <span className="font-medium text-gray-700">Project</span>
-              <span className="font-bold text-gray-900">{activeProject.name}</span>
-            </div>
-            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
-              <span className="font-medium text-gray-700">Description</span>
-              <span className="text-sm text-gray-600 text-right max-w-xs">{lastTransaction.desc}</span>
-            </div>
-            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
-              <span className="font-medium text-gray-700">Payment Nature</span>
-              <div className="text-right">
-                <p className="font-medium text-gray-900">{lastTransaction.type}</p>
-                <p className="text-xs text-gray-500">{lastTransaction.fundType}</p>
-              </div>
-            </div>
-            <div className="flex justify-between items-center pt-2">
-              <span className="text-lg font-bold text-gray-900 uppercase">Total Amount</span>
-              <span className="text-3xl font-bold text-gray-900">₹{lastTransaction.amount.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <button onClick={() => setShowInvoice(false)} className="w-full py-3 bg-gray-100 text-gray-800 font-bold rounded-lg hover:bg-gray-200 transition-colors border border-gray-300">
-            Close Invoice & Return to Ledger
-          </button>
-        </div>
-      )}
-
-      {/* Transaction History Table */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-200 bg-gray-50">
-          <h3 className="font-bold text-gray-900 text-lg">Transaction History Ledger</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
-            <thead className="bg-white">
-              <tr>
-                <th className="px-6 py-4 font-semibold text-gray-700">TRX ID / Date</th>
-                <th className="px-6 py-4 font-semibold text-gray-700">Routing Details (From → To)</th>
-                <th className="px-6 py-4 font-semibold text-gray-700">Payment Nature</th>
-                <th className="px-6 py-4 font-semibold text-gray-700 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {currentHistory.length === 0 ? (
-                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-500">No transactions recorded.</td></tr>
-              ) : (
-                currentHistory.map((trx) => (
-                  <tr key={trx.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-900">{trx.id}</p>
-                      <p className="text-xs text-gray-500 mt-1">{trx.date}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col space-y-2">
-                        <div className="flex gap-2">
-                          <span className="text-[10px] font-bold text-gray-400 w-8">OUT:</span>
-                          <span className="text-sm font-medium text-gray-800">{trx.sender}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="text-[10px] font-bold text-gray-400 w-8">IN:</span>
-                          <span className="text-sm font-medium text-gray-800">{trx.receiver}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-gray-900">{trx.type}</p>
-                      <p className="text-xs text-gray-500 mt-1">{trx.fundType}</p>
-                      <p className="text-xs text-gray-400 mt-1 italic line-clamp-1 max-w-[200px]">{trx.desc}</p>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <p className="font-bold text-lg text-gray-900">₹{trx.amount.toLocaleString()}</p>
-                      <button className="text-[10px] uppercase font-bold text-gray-500 underline mt-2 hover:text-gray-900">View Bill</button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
     </div>
   );

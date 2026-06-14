@@ -4,20 +4,21 @@ import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Project from './pages/Project'; 
+import CreateProject from './pages/CreateProject';
+import DemandCreation from './pages/DemandCreation'; 
+import CloseProject from './pages/CloseProject';
+// 1. IMPORT THE NEW DEMAND UPDATE PAGE
+import DemandUpdate from './pages/DemandUpdate'; 
 import Documentation from './pages/Documentation'; 
 import ProgressUpdate from './pages/ProgressUpdate'; 
 import FundAllotment from './pages/FundAllotment';
-import ProjectRequest from './pages/ProjectRequest';
-
-// 1. Import the new Master pages
 import Scheme from './pages/Scheme';
 import Engineer from './pages/Engineer';
-
 import Accountant from './pages/Accountant';
 import Valuation from './pages/Valuation';
 import GramPanchayat from './pages/GramPanchayat';
 
-// Generic placeholder for the remaining reports/settings links
+// Generic placeholder
 const PlaceholderPage = ({ title }) => (
   <div className="bg-white p-6 border border-gray-200 rounded-xl shadow-sm">
     <h2 className="text-xl font-bold text-gray-900">{title} Module</h2>
@@ -35,15 +36,21 @@ export default function App() {
           {/* Main Features */}
           <Route index element={<Dashboard />} />
           <Route path="project" element={<Project />} />
+          <Route path="project/create" element={<CreateProject />} />
+
+          <Route path="demand-creation" element={<DemandCreation />} />
+          <Route path="close-project" element={<CloseProject />} />
+          {/* 2. ADD THE DEMAND UPDATE ROUTE HERE */}
+          <Route path="demand-update" element={<DemandUpdate />} />
+
           <Route path="documentation" element={<Documentation />} />
           <Route path="progress" element={<ProgressUpdate />} />
           <Route path="fund-allotment" element={<FundAllotment />} />
-          <Route path="project-request" element={<ProjectRequest />} />
+
           
-          {/* Master Configurations - Now Active! */}
+          {/* Master Configurations */}
           <Route path="scheme" element={<Scheme />} />
           <Route path="engineer" element={<Engineer />} />
-
           <Route path="accountant" element={<Accountant />} />
           <Route path="valuation" element={<Valuation />} />
           <Route path="gram-panchayat" element={<GramPanchayat />} />

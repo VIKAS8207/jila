@@ -1,234 +1,158 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 
 export default function Project() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const navigate = useNavigate(); 
+  const { userRole } = useOutletContext(); 
+
   // Filter States
   const [filterDepartment, setFilterDepartment] = useState('');
-  const [filterScheme, setFilterScheme] = useState('');
+  const [filterFinYear, setFilterFinYear] = useState('');
   const [filterSector, setFilterSector] = useState('');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Mock Data (Expanded to demonstrate pagination)
+  // Updated Mock Data with the new 10 fields
   const [projects, setProjects] = useState([
-    {
-      id: 1,
-      projectName: 'Sample Community Hall',
-      agreementNo: 'AGR-2026-001',
-      dateOfCreation: '2026-06-01',
-      dueDate: '2026-12-01',
-      sector: 'Welfare', 
-      sanctionYear: '2025-2026',
-      district: 'Raipur',
-      cityTown: 'Raipur',
-      gpWard: 'Ward 45',
-      totalArea: '1500',
-      contractor: 'BuildTech Corp',
-      scheme: 'State Grant',
-      subEngineer: 'R. Kumar',
-      department: 'Janpad' 
-    },
-    {
-      id: 2,
-      projectName: 'Primary School Renovation',
-      agreementNo: 'AGR-2026-002',
-      dateOfCreation: '2026-05-15',
-      dueDate: '2026-10-15',
-      sector: 'Education',
-      sanctionYear: '2025-2026',
-      district: 'Raipur',
-      cityTown: 'Abhanpur',
-      gpWard: 'Ward 12',
-      totalArea: '2000',
-      contractor: 'EduBuild Pvt',
-      scheme: 'Central Fund',
-      subEngineer: 'S. Singh',
-      department: 'CO Jila Adhyaksh'
-    },
-    {
-      id: 3,
-      projectName: 'Village Water Tank',
-      agreementNo: 'AGR-2026-003',
-      dateOfCreation: '2026-06-10',
-      dueDate: '2026-09-30',
-      sector: 'Infrastructure',
-      sanctionYear: '2026-2027',
-      district: 'Raipur',
-      cityTown: 'Arang',
-      gpWard: 'Ward 3',
-      totalArea: '500',
-      contractor: 'AquaFlow Ind',
-      scheme: 'Jal Jeevan Mission',
-      subEngineer: 'A. Patel',
-      department: 'Gram Panchayat'
-    },
-    {
-      id: 4,
-      projectName: 'Rural Dispensary',
-      agreementNo: 'AGR-2026-004',
-      dateOfCreation: '2026-04-20',
-      dueDate: '2026-11-20',
-      sector: 'Health',
-      sanctionYear: '2025-2026',
-      district: 'Raipur',
-      cityTown: 'Tilda',
-      gpWard: 'Ward 8',
-      totalArea: '1200',
-      contractor: 'MediCorp Builders',
-      scheme: 'State Grant',
-      subEngineer: 'R. Kumar',
-      department: 'Janpad'
-    },
-    {
-      id: 5,
-      projectName: 'Connecting Road Extension',
-      agreementNo: 'AGR-2026-005',
-      dateOfCreation: '2026-03-05',
-      dueDate: '2026-08-15',
-      sector: 'Infrastructure',
-      sanctionYear: '2025-2026',
-      district: 'Raipur',
-      cityTown: 'Abhanpur',
-      gpWard: 'Ward 2',
-      totalArea: '5000',
-      contractor: 'Roadways Ltd',
-      scheme: 'PMGSY',
-      subEngineer: 'V. Sharma',
-      department: 'CO Jila Adhyaksh'
-    },
-    {
-      id: 6,
-      projectName: 'Panchayat Solar Lights',
-      agreementNo: 'AGR-2026-006',
-      dateOfCreation: '2026-06-05',
-      dueDate: '2026-07-20',
-      sector: 'Infrastructure',
-      sanctionYear: '2026-2027',
-      district: 'Raipur',
-      cityTown: 'Arang',
-      gpWard: 'Ward 5',
-      totalArea: 'N/A',
-      contractor: 'SunPower Co',
-      scheme: 'Local Body',
-      subEngineer: 'S. Singh',
-      department: 'Gram Panchayat'
-    }
+    { id: 1, workId: 'WRK-2026-834', workName: 'Sample Community Hall', sector: 'Welfare', subSector: 'Community Dev', relatedDepartment: 'Janpad', proposedBy: 'Sarpanch', financialYear: '2025-2026', executingDepartment: 'RES', executingAgency: 'BuildTech Corp' },
+    { id: 2, workId: 'WRK-2026-835', workName: 'Primary School Renovation', sector: 'Education', subSector: 'Maintenance', relatedDepartment: 'CEO Jila Panchayat', proposedBy: 'MLA', financialYear: '2025-2026', executingDepartment: 'PWD', executingAgency: 'EduBuild Pvt' },
+    { id: 3, workId: 'WRK-2026-836', workName: 'Village Water Tank', sector: 'Infrastructure', subSector: 'Water Supply', relatedDepartment: 'Gram Panchayat', proposedBy: 'Panchayat', financialYear: '2026-2027', executingDepartment: 'PHE', executingAgency: 'AquaFlow Ind' },
+    { id: 4, workId: 'WRK-2026-837', workName: 'Rural Dispensary', sector: 'Health', subSector: 'Hospital Constr.', relatedDepartment: 'Janpad', proposedBy: 'Health Min.', financialYear: '2025-2026', executingDepartment: 'CGMSC', executingAgency: 'MediCorp Builders' },
+    { id: 5, workId: 'WRK-2026-838', workName: 'Connecting Road Ext.', sector: 'Infrastructure', subSector: 'Road Dev.', relatedDepartment: 'CEO Jila Panchayat', proposedBy: 'MP', financialYear: '2025-2026', executingDepartment: 'PWD', executingAgency: 'Roadways Ltd' },
+    { id: 6, workId: 'WRK-2026-839', workName: 'Panchayat Solar Lights', sector: 'Infrastructure', subSector: 'Energy', relatedDepartment: 'Gram Panchayat', proposedBy: 'Sarpanch', financialYear: '2026-2027', executingDepartment: 'CREDA', executingAgency: 'SunPower Co' }
   ]);
-
-  const [formData, setFormData] = useState({
-    projectName: '', agreementNo: '', dateOfCreation: '', dueDate: '',
-    sector: '', sanctionYear: '', district: '', cityTown: '',
-    gpWard: '', totalArea: '', contractor: '', scheme: '', subEngineer: '', department: ''
-  });
 
   // Reset pagination to page 1 whenever a filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterDepartment, filterScheme, filterSector]);
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newProject = { ...formData, id: Date.now() };
-    setProjects([newProject, ...projects]);
-    setIsModalOpen(false);
-    setFormData({ 
-      projectName: '', agreementNo: '', dateOfCreation: '', dueDate: '',
-      sector: '', sanctionYear: '', district: '', cityTown: '',
-      gpWard: '', totalArea: '', contractor: '', scheme: '', subEngineer: '', department: ''
-    });
-  };
+  }, [filterDepartment, filterFinYear, filterSector]);
 
   // 1. Filter Logic
   const filteredProjects = projects.filter(proj => {
-    const matchDepartment = filterDepartment === '' || proj.department === filterDepartment;
-    const matchScheme = filterScheme === '' || proj.scheme === filterScheme;
+    const matchDepartment = filterDepartment === '' || proj.relatedDepartment === filterDepartment;
+    const matchFinYear = filterFinYear === '' || proj.financialYear === filterFinYear;
     const matchSector = filterSector === '' || proj.sector === filterSector;
-    return matchDepartment && matchScheme && matchSector;
+    return matchDepartment && matchFinYear && matchSector;
   });
 
   // 2. Pagination Logic
   const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
   const currentData = filteredProjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
+  const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
+  const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
 
   // Extract unique values for dropdowns dynamically
-  const uniqueSchemes = [...new Set(projects.map(p => p.scheme))];
+  const uniqueFinYears = [...new Set(projects.map(p => p.financialYear))];
   const uniqueSectors = [...new Set(projects.map(p => p.sector))];
+  const uniqueDepartments = [...new Set(projects.map(p => p.relatedDepartment))];
+
+  // ==========================================
+  // CUSTOM DROPDOWN COMPONENT
+  // ==========================================
+  const CustomDropdown = ({ options, value, onChange, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+      <div className="relative w-full" ref={dropdownRef}>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full flex items-center justify-between px-5 py-3 rounded-full text-sm font-bold transition-all duration-200 ${
+            isOpen ? 'bg-[#451db3]/10 text-[#451db3] border-transparent shadow-inner' : 'bg-white text-slate-700 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_15px_rgba(69,29,179,0.08)]'
+          }`}
+        >
+          <span className="truncate">{value || placeholder}</span>
+          <svg className={`w-4 h-4 ml-3 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#451db3]' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-20 w-full mt-2 bg-white/95 backdrop-blur-2xl border border-slate-100 rounded-2xl shadow-[0_10px_40px_rgba(69,29,179,0.15)] overflow-hidden animate-in fade-in zoom-in-95 py-2">
+            <ul className="max-h-60 overflow-y-auto px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <li 
+                onClick={() => { onChange(''); setIsOpen(false); }}
+                className={`px-4 py-2.5 my-1 text-sm font-bold rounded-xl cursor-pointer transition-colors ${value === '' ? 'bg-[#451db3] text-white' : 'text-slate-600 hover:bg-[#451db3]/10 hover:text-[#451db3]'}`}
+              >
+                {placeholder}
+              </li>
+              {options.map((opt, idx) => (
+                <li 
+                  key={idx}
+                  onClick={() => { onChange(opt); setIsOpen(false); }}
+                  className={`px-4 py-2.5 my-1 text-sm font-bold rounded-xl cursor-pointer transition-colors ${value === opt ? 'bg-[#451db3] text-white' : 'text-slate-600 hover:bg-[#451db3]/10 hover:text-[#451db3]'}`}
+                >
+                  {opt}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       
       {/* Header & Action Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 border border-gray-200 rounded-xl shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Project Management</h2>
-          <p className="text-sm text-gray-500">View and manage all active projects.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-wide">Project Management</h2>
+          <p className="text-sm font-medium text-slate-500 mt-1">View and manage all active projects across departments.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shrink-0 shadow-sm"
+          onClick={() => navigate('/dashboard/project/create', { state: { userRole } })} 
+          className="bg-gradient-to-r from-[#451db3] to-[#5b2bd9] hover:from-[#3a1796] hover:to-[#451db3] text-white px-8 py-3.5 rounded-full text-sm font-bold transition-all transform hover:scale-[1.02] shadow-[0_8px_20px_rgba(69,29,179,0.25)] shrink-0"
         >
           + New Project
         </button>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
-        <span className="text-sm font-bold text-gray-700 shrink-0">Filter By:</span>
+      <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative">
+        <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0 ml-2">Filters</span>
         
-        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-          <select 
-            value={filterDepartment} 
-            onChange={(e) => setFilterDepartment(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
-          >
-            <option value="">All Departments</option>
-            <option value="CO Jila Adhyaksh">CO Jila Adhyaksh</option>
-            <option value="Janpad">Janpad</option>
-            <option value="Gram Panchayat">Gram Panchayat</option>
-          </select>
-
-          <select 
-            value={filterScheme} 
-            onChange={(e) => setFilterScheme(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
-          >
-            <option value="">All Schemes</option>
-            {uniqueSchemes.map((scheme, idx) => (
-              <option key={idx} value={scheme}>{scheme}</option>
-            ))}
-          </select>
-
-          <select 
-            value={filterSector} 
-            onChange={(e) => setFilterSector(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-gray-50"
-          >
-            <option value="">All Sectors (Work)</option>
-            {uniqueSectors.map((sector, idx) => (
-              <option key={idx} value={sector}>{sector}</option>
-            ))}
-          </select>
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+          <CustomDropdown 
+            placeholder="All Departments"
+            value={filterDepartment}
+            onChange={setFilterDepartment}
+            options={uniqueDepartments}
+          />
+          <CustomDropdown 
+            placeholder="All Financial Years"
+            value={filterFinYear}
+            onChange={setFilterFinYear}
+            options={uniqueFinYears}
+          />
+          <CustomDropdown 
+            placeholder="All Sectors (Work)"
+            value={filterSector}
+            onChange={setFilterSector}
+            options={uniqueSectors}
+          />
         </div>
         
-        {(filterDepartment || filterScheme || filterSector) && (
+        {(filterDepartment || filterFinYear || filterSector) && (
           <button 
-            onClick={() => { setFilterDepartment(''); setFilterScheme(''); setFilterSector(''); }}
-            className="text-sm text-gray-500 hover:text-gray-900 underline underline-offset-2 shrink-0"
+            onClick={() => { setFilterDepartment(''); setFilterFinYear(''); setFilterSector(''); }}
+            className="text-xs font-bold text-red-500 hover:text-white hover:bg-red-500 px-4 py-2.5 rounded-full transition-all shrink-0 bg-red-50"
           >
             Clear Filters
           </button>
@@ -236,40 +160,46 @@ export default function Project() {
       </div>
 
       {/* Data Table & Pagination Container */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
+      <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden z-10 relative">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
-            <thead className="bg-gray-50">
+          <table className="min-w-full text-left border-collapse whitespace-nowrap">
+            {/* Primary Color 50% opacity shade for Header */}
+            <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
               <tr>
-                <th className="px-6 py-3 font-semibold text-gray-700">Project Name</th>
-                <th className="px-6 py-3 font-semibold text-gray-700">Department</th>
-                <th className="px-6 py-3 font-semibold text-gray-700">Scheme</th>
-                <th className="px-6 py-3 font-semibold text-gray-700">Sector</th>
-                <th className="px-6 py-3 font-semibold text-gray-700">Due Date</th>
-                <th className="px-6 py-3 font-semibold text-gray-700">Sub Engineer</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">S.No</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work ID</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work Name</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Sector</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Sub Sector</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Related Dept</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Proposed By</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Fin. Year</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Exec. Dept</th>
+                <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Exec. Agency</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-100">
               {currentData.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">No projects match the selected filters.</td>
+                  <td colSpan="10" className="px-8 py-12 text-center text-slate-500 font-bold">No projects match the selected filters.</td>
                 </tr>
               ) : (
-                currentData.map((proj) => (
-                  <tr key={proj.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-900">{proj.projectName}</p>
-                      <p className="text-xs text-gray-500 font-mono">{proj.agreementNo}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                        {proj.department}
+                currentData.map((proj, index) => (
+                  <tr key={proj.id} className="hover:bg-[#451db3]/5 transition-colors group text-sm">
+                    <td className="px-5 py-4 font-bold text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                    <td className="px-5 py-4 font-mono font-bold text-slate-700">{proj.workId}</td>
+                    <td className="px-5 py-4 font-bold text-slate-900">{proj.workName}</td>
+                    <td className="px-5 py-4 font-medium text-slate-600">{proj.sector}</td>
+                    <td className="px-5 py-4 font-medium text-slate-600">{proj.subSector}</td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-slate-600 border border-slate-200 group-hover:border-[#451db3]/30 group-hover:text-[#451db3] transition-colors">
+                        {proj.relatedDepartment}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-700 font-medium">{proj.scheme}</td>
-                    <td className="px-6 py-4 text-gray-600">{proj.sector}</td>
-                    <td className="px-6 py-4 text-gray-600">{proj.dueDate}</td>
-                    <td className="px-6 py-4 text-gray-600">{proj.subEngineer}</td>
+                    <td className="px-5 py-4 font-medium text-slate-600">{proj.proposedBy}</td>
+                    <td className="px-5 py-4 font-bold text-slate-700">{proj.financialYear}</td>
+                    <td className="px-5 py-4 font-medium text-slate-600">{proj.executingDepartment}</td>
+                    <td className="px-5 py-4 font-medium text-slate-600">{proj.executingAgency}</td>
                   </tr>
                 ))
               )}
@@ -278,161 +208,31 @@ export default function Project() {
         </div>
 
         {/* Pagination Controls */}
-        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            Showing <span className="font-medium text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</span> of <span className="font-medium text-gray-900">{filteredProjects.length}</span> results
+        <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</span> of <span className="text-[#451db3]">{filteredProjects.length}</span>
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button 
               onClick={handlePrevPage} 
               disabled={currentPage === 1}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white hover:border-[#451db3] disabled:opacity-50 disabled:pointer-events-none transition-all shadow-sm"
             >
-              Previous
+              Prev
             </button>
-            <span className="text-sm text-gray-700 font-medium px-2">
-              Page {currentPage} of {totalPages || 1}
-            </span>
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#451db3]/10 text-[#451db3] font-black text-xs">
+              {currentPage}
+            </div>
             <button 
               onClick={handleNextPage} 
               disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white hover:border-[#451db3] disabled:opacity-50 disabled:pointer-events-none transition-all shadow-sm"
             >
               Next
             </button>
           </div>
         </div>
       </div>
-
-      {/* New Project Modal Overlay */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-4xl my-8">
-            
-            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-              <h3 className="text-xl font-bold text-gray-900">Create New Project</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Project Name</label>
-                  <input type="text" name="projectName" required value={formData.projectName} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Agreement No.</label>
-                  <input type="text" name="agreementNo" required value={formData.agreementNo} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                </div>
-
-                {/* UPDATED: Department Field (previously Sector) */}
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Initiating Department</label>
-                  <select name="department" required value={formData.department} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
-                    <option value="">Select Department</option>
-                    <option value="CO Jila Adhyaksh">CEO Jila Adhyaksh</option>
-                    <option value="Janpad">Janpad</option>
-                    <option value="Gram Panchayat">Gram Panchayat</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Scheme</label>
-                  <select name="scheme" required value={formData.scheme} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
-                    <option value="">Select Scheme</option>
-                    <option value="State Grant">State Grant</option>
-                    <option value="Central Fund">Central Fund</option>
-                    <option value="Local Body">Local Body</option>
-                    <option value="Jal Jeevan Mission">Jal Jeevan Mission</option>
-                    <option value="PMGSY">PMGSY</option>
-                  </select>
-                </div>
-
-                {/* UPDATED: Sector Field (previously Type of Work) */}
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Sector (Type of Work)</label>
-                  <select name="sector" required value={formData.sector} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none bg-white">
-                    <option value="">Select Sector</option>
-                    <option value="Welfare">Welfare</option>
-                    <option value="Education">Education</option>
-                    <option value="Health">Health</option>
-                    <option value="Infrastructure">Infrastructure</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Date of Creation</label>
-                    <input type="date" name="dateOfCreation" required value={formData.dateOfCreation} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Due Date</label>
-                    <input type="date" name="dueDate" required value={formData.dueDate} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Sanction Year</label>
-                    <input type="text" name="sanctionYear" placeholder="e.g. 2025-2026" required value={formData.sanctionYear} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Area (Sq. Ft.)</label>
-                    <input type="number" name="totalArea" required value={formData.totalArea} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">District</label>
-                    <input type="text" name="district" required value={formData.district} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">City / Town</label>
-                    <input type="text" name="cityTown" required value={formData.cityTown} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">GP / Ward Name</label>
-                  <input type="text" name="gpWard" required value={formData.gpWard} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Name of Contractor</label>
-                  <input type="text" name="contractor" required value={formData.contractor} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Sub Engineer Assigned</label>
-                  <input type="text" name="subEngineer" required value={formData.subEngineer} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none" />
-                </div>
-
-              </div>
-
-              {/* Form Actions */}
-              <div className="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-5">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="px-5 py-2.5 text-sm font-bold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
-                >
-                  Save Project
-                </button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   );
