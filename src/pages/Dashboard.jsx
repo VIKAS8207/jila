@@ -1,27 +1,27 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 
-// Import your new separated dashboard components
+// Import the separated dashboard components
 import AdminDashboard from '../components/dashboards/AdminDashboard';
-//import EngineerDashboard from '../components/dashboards/EngineerDashboard';
-// import AccountantDashboard from '../components/dashboards/AccountantDashboard';
+import EngineerDashboard from '../components/dashboards/EngineerDashboard';
 
 export default function Dashboard() {
-  const { userRole, isFullAccess } = useOutletContext();
+  const { userRole } = useOutletContext();
 
-  // Traffic Controller Logic
-  if (userRole === 'CO Jila Adhyaksh' || userRole === 'Janpad') {
+  // Traffic Controller Logic for Higher Admins
+  if (['CEO Jila Panchayat', 'Jila Panchayat', 'Janpad', 'Gram Panchayat', 'CO Jila Adhyaksh'].includes(userRole)) {
     return <AdminDashboard userRole={userRole} />;
   } 
   
-  if (userRole === 'Gram Panchayat') {
-    // return <PanchayatDashboard userRole={userRole} />;
-    return <AdminDashboard userRole={userRole} />; // Fallback for now
-  }
-  
+  // Traffic Controller Logic for Accountant
   if (userRole === 'Accountant') {
-    // return <AccountantDashboard />;
-    return <div>Accountant Dashboard Under Construction</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-96 bg-white/60 backdrop-blur-2xl rounded-3xl border border-slate-100 shadow-sm">
+        <span className="text-5xl mb-4">🚧</span>
+        <h2 className="text-2xl font-black text-slate-800">Accountant Dashboard</h2>
+        <p className="text-slate-500 font-bold mt-2">Currently under construction.</p>
+      </div>
+    );
   }
 
   // Default to Engineer / Sub-Engineer view

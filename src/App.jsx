@@ -21,6 +21,8 @@ import Sector from './pages/Sector';
 import FinancialYear from './pages/FinancialYear';
 import ProposalAuthority from './pages/ProposalAuthority';
 
+import ProjectVerify from './pages/verifypage/ProjectVerify';
+
 // Generic placeholder
 const PlaceholderPage = ({ title }) => (
   <div className="bg-white p-6 border border-gray-200 rounded-xl shadow-sm">
@@ -60,6 +62,8 @@ export default function App() {
           <Route path="sector" element={<Sector />} />
           <Route path="financial-year" element={<FinancialYear />} />
           <Route path="proposal-authority" element={<ProposalAuthority />} />
+
+          <Route path="verify-project" element={<ProjectVerify />} />
           
           {/* Reports */}
           <Route path="reports/financial" element={<PlaceholderPage title="Financial Summary Report" />} />

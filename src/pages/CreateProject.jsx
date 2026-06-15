@@ -49,16 +49,16 @@ const CustomDropdown = ({ options, value, onChange, placeholder, disabled = fals
 };
 
 // --- REUSABLE FILE INPUT ---
-const FileInput = ({ label, onChange, disabled, required }) => (
+const FileInput = ({ label, onChange, disabled, required, accept = "*", placeholder = "Choose Document..." }) => (
   <div className={`space-y-1.5 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
     <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <div className="relative flex items-center">
-      <input type="file" onChange={onChange} disabled={disabled} required={required} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+      <input type="file" accept={accept} onChange={onChange} disabled={disabled} required={required} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
       <div className="w-full flex items-center justify-between px-5 py-3.5 rounded-full border border-slate-200 bg-white/50 text-sm font-bold text-slate-500 transition-all focus-within:border-[#451db3] focus-within:ring-2 focus-within:ring-[#451db3]/20">
-        <span className="truncate">Choose Document...</span>
-        <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-black tracking-wider shadow-sm">BROWSE</span>
+        <span className="truncate">{placeholder}</span>
+        <span className="bg-[#451db3]/10 text-[#451db3] px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest shadow-sm uppercase">Browse</span>
       </div>
     </div>
   </div>
@@ -74,17 +74,20 @@ export default function CreateProject() {
   // Custom Toast State
   const [toast, setToast] = useState({ show: false, message: '' });
 
-  // Form State
+  // Form State - Expanded with new fields
   const [formData, setFormData] = useState({
     district: 'Bilaspur', // Default mock fetched data
     projectName: '', workPriority: '', sector: '', subSector: '', department: '',
-    remarks: '', financialYear: '', proposedBy: '', proposalLetterDoc: null,
-    hasTS: 'Yes', tsDoc: null, geoPhoto: null, layoutDoc: null, mapDoc: null, 
+    remarks: '', financialYear: '', proposedBy: '', estimatedAmount: '', proposalLetterDoc: null,
+    hasTS: 'Yes', tsDoc: null, asDoc: null, ucDoc: null, ccDoc: null, geoPhoto: null, layoutDoc: null, mapDoc: null, 
     khasraDoc: null, gpProposalDoc: null, sitePlanDoc: null, additionalDoc: null,
     agency: '', proposalLetterNo: '', proposalDate: '', duration: '', proposalFinalDoc: null
   });
 
   const [geoTagData, setGeoTagData] = useState(null);
+
+  // Proposal Authority Options
+  const proposalAuthorities = ['CEO Jila Panchayat', 'BDO', 'Sarpanch', 'MLA', 'MP', 'Gram Panchayat', 'Janpad'];
 
   // Handlers
   const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
@@ -94,7 +97,7 @@ export default function CreateProject() {
     if (file) {
       handleInputChange('geoPhoto', file);
       setGeoTagData('Extracting GPS coordinates...');
-      setTimeout(() => setGeoTagData('📍 Lat: 22.0796, Long: 82.1391 (Verified)'), 1500);
+      setTimeout(() => setGeoTagData('📍 Lat: 22.0796, Long: 82.1391 (LOCKED)'), 1500);
     }
   };
 
@@ -107,7 +110,6 @@ export default function CreateProject() {
     // Simulate API Call
     setTimeout(() => {
       setToast({ show: true, message: 'Project Created Successfully!' });
-      // FIX: Securely routing back to project dashboard with session state
       setTimeout(() => navigate('/dashboard/project', { state: { userRole } }), 2000); 
     }, 1000);
   };
@@ -135,7 +137,6 @@ export default function CreateProject() {
           <h2 className="text-2xl font-black text-slate-800 tracking-wide">Initiate New Project</h2>
           <p className="text-sm font-medium text-slate-500 mt-1">Complete the 3-step authorization process to register a new work scheme.</p>
         </div>
-        {/* FIX: Securely routing back to project dashboard on Cancel */}
         <button onClick={() => navigate('/dashboard/project', { state: { userRole } })} className="text-sm font-bold text-slate-400 hover:text-[#451db3] transition-colors">
           Cancel ✕
         </button>
@@ -184,20 +185,40 @@ export default function CreateProject() {
                   <input type="text" required placeholder="Enter official project name" value={formData.projectName} onChange={e => handleInputChange('projectName', e.target.value)} className={inputClass} />
                 </div>
                 
+                <div className="space-y-1.5 relative z-50">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposed By <span className="text-red-500">*</span></label>
+                  <CustomDropdown 
+                    placeholder="Select Authority" 
+                    value={formData.proposedBy} 
+                    onChange={v => handleInputChange('proposedBy', v)} 
+                    options={proposalAuthorities} 
+                  />
+                </div>
                 <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Estimated Amount (₹) <span className="text-red-500">*</span></label>
+                  <input 
+                    type="number" required 
+                    placeholder="Total estimated cost" 
+                    value={formData.estimatedAmount} 
+                    onChange={e => handleInputChange('estimatedAmount', e.target.value)} 
+                    className={inputClass} 
+                  />
+                </div>
+                
+                <div className="space-y-1.5 relative z-40">
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Work Priority <span className="text-red-500">*</span></label>
                   <CustomDropdown placeholder="Select Priority" value={formData.workPriority} onChange={v => handleInputChange('workPriority', v)} options={['High (Immediate)', 'Medium', 'Low (Routine)']} />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative z-30">
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sector <span className="text-red-500">*</span></label>
                   <CustomDropdown placeholder="Select Sector" value={formData.sector} onChange={v => handleInputChange('sector', v)} options={['Health', 'Infrastructure', 'Education', 'Welfare']} />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative z-20">
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sub Sector <span className="text-red-500">*</span></label>
                   <CustomDropdown placeholder="Select Sub Sector" value={formData.subSector} onChange={v => handleInputChange('subSector', v)} options={['Creation of Hospital', 'Creation of Park', 'Making of School', 'Road Development']} />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative z-10">
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Related Department</label>
                   <CustomDropdown placeholder="Select Department" value={formData.department} onChange={v => handleInputChange('department', v)} options={['CEO Jila Panchayat', 'Janpad', 'Gram Panchayat', 'PWD']} />
                 </div>
@@ -206,15 +227,11 @@ export default function CreateProject() {
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Financial Year</label>
                   <CustomDropdown placeholder="Select Year" value={formData.financialYear} onChange={v => handleInputChange('financialYear', v)} options={['2025-2026', '2026-2027']} />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposed By <span className="text-red-500">*</span></label>
-                  <input type="text" required placeholder="Name/Designation of proposer" value={formData.proposedBy} onChange={e => handleInputChange('proposedBy', e.target.value)} className={inputClass} />
-                </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Objective / Remarks</label>
-                <textarea rows="3" placeholder="Brief description of the work objective..." value={formData.remarks} onChange={e => handleInputChange('remarks', e.target.value)} className={`${inputClass} rounded-2xl resize-none`}></textarea>
+                <textarea rows="3" placeholder="Brief description of the work objective..." value={formData.remarks} onChange={e => handleInputChange('remarks', e.target.value)} className={`${inputClass} rounded-2xl resize-none py-4`}></textarea>
               </div>
 
               <FileInput label="Upload Proposal Letter" required={true} onChange={e => handleInputChange('proposalLetterDoc', e.target.files[0])} />
@@ -248,27 +265,46 @@ export default function CreateProject() {
               </div>
 
               {/* Conditionally Disabled Fields */}
-              <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity duration-300 ${formData.hasTS === 'No' ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
-                <FileInput label="Technical Sanction Document" required={formData.hasTS === 'Yes'} onChange={e => handleInputChange('tsDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+              <div className={`transition-opacity duration-300 ${formData.hasTS === 'No' ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
                 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Site Photo (With Geo-Tag) <span className="text-red-500">*</span></label>
-                  <div className="relative flex items-center">
-                    <input type="file" accept="image/*" disabled={formData.hasTS === 'No'} onChange={handlePhotoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                    <div className="w-full flex items-center justify-between px-5 py-3.5 rounded-full border border-slate-200 bg-white/50 text-sm font-bold text-slate-500 transition-all focus-within:border-[#451db3] focus-within:ring-2 focus-within:ring-[#451db3]/20">
-                      <span className="truncate">Upload Image...</span>
-                      <span className="text-[#451db3]">📷</span>
-                    </div>
+                {/* GEO WARNING BANNER */}
+                <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-6 mb-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-sm">
+                  <span className="text-4xl text-red-500 mt-1">⚠️</span>
+                  <div>
+                    <h5 className="text-red-700 font-black uppercase tracking-widest mb-2">Crucial Geofence Registration</h5>
+                    <p className="text-sm font-bold text-red-600/80 leading-relaxed">
+                      The GPS coordinates captured in the photo below will be <span className="text-red-700 font-black border-b border-red-300">permanently registered</span> as the official project site. Future progress updates will require engineers to be physically present at these exact coordinates. Without a GPS match, all future updates will be blocked by the system.
+                    </p>
                   </div>
-                  {geoTagData && <p className="text-[10px] font-black text-[#451db3] uppercase tracking-widest pl-4 mt-2 animate-pulse">{geoTagData}</p>}
                 </div>
 
-                <FileInput label="Layout of Work Doc" onChange={e => handleInputChange('layoutDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
-                <FileInput label="Map Document" onChange={e => handleInputChange('mapDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
-                <FileInput label="Khasra B1 Document" onChange={e => handleInputChange('khasraDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
-                <FileInput label="GP Prastav Proposal Doc" onChange={e => handleInputChange('gpProposalDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
-                <FileInput label="Site Plan Document" onChange={e => handleInputChange('sitePlanDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
-                <FileInput label="Additional Documents" onChange={e => handleInputChange('additionalDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Geo-Tag Photo (Full Width inside grid via col-span-2) */}
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Initial Site Geo-Tag Photo <span className="text-red-500">*</span></label>
+                    <div className="relative flex items-center">
+                      <input type="file" accept="image/*" capture="environment" disabled={formData.hasTS === 'No'} onChange={handlePhotoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                      <div className={`w-full flex items-center justify-between px-5 py-4 rounded-full border-2 ${formData.geoPhoto ? 'border-emerald-400 bg-emerald-50' : 'border-red-200 bg-white'} text-sm font-bold text-slate-500 transition-all shadow-sm`}>
+                        <span className={`truncate ${formData.geoPhoto ? 'text-emerald-700' : ''}`}>{formData.geoPhoto ? `Captured: ${formData.geoPhoto.name}` : 'Tap to Open Camera...'}</span>
+                        <span className="text-2xl">{formData.geoPhoto ? '✅' : '📸'}</span>
+                      </div>
+                    </div>
+                    {geoTagData && <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest pl-4 mt-2 animate-pulse">{geoTagData}</p>}
+                  </div>
+
+                  <FileInput label="Technical Sanction Document" required={formData.hasTS === 'Yes'} accept=".pdf" onChange={e => handleInputChange('tsDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} placeholder="Upload TS PDF" />
+                  <FileInput label="Administrative Sanction (AS)" accept=".pdf" onChange={e => handleInputChange('asDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} placeholder="Upload AS PDF" />
+                  <FileInput label="Utility Certificate (UC)" accept=".pdf" onChange={e => handleInputChange('ucDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} placeholder="Upload UC PDF" />
+                  <FileInput label="Completion Certificate (CC)" accept=".pdf" onChange={e => handleInputChange('ccDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} placeholder="Upload CC PDF" />
+                  
+                  <FileInput label="Layout of Work Doc" onChange={e => handleInputChange('layoutDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Map Document" onChange={e => handleInputChange('mapDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Khasra B1 Document" onChange={e => handleInputChange('khasraDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="GP Prastav Proposal Doc" onChange={e => handleInputChange('gpProposalDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Site Plan Document" onChange={e => handleInputChange('sitePlanDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Additional Documents" onChange={e => handleInputChange('additionalDoc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                </div>
               </div>
             </div>
           )}
@@ -279,7 +315,7 @@ export default function CreateProject() {
               <h3 className="text-lg font-black text-slate-800 border-b border-slate-100 pb-3 mb-6">3. Final Proposal Review</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative z-50">
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Agency / Department <span className="text-red-500">*</span></label>
                   <CustomDropdown placeholder="Select Agency" value={formData.agency} onChange={v => handleInputChange('agency', v)} options={['Panchayat Raj', 'Urban Admin', 'PWD', 'RES']} />
                 </div>

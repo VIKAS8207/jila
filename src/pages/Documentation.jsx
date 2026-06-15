@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 
+// --- REUSABLE FILE INPUT ---
+const FileInput = ({ label, onChange, disabled, required, accept = "*", placeholder = "Choose Document..." }) => (
+  <div className={`space-y-1.5 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <div className="relative flex items-center">
+      <input type="file" accept={accept} onChange={onChange} disabled={disabled} required={required} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+      <div className="w-full flex items-center justify-between px-5 py-3.5 rounded-full border border-slate-200 bg-white/50 text-sm font-bold text-slate-500 transition-all focus-within:border-[#451db3] focus-within:ring-2 focus-within:ring-[#451db3]/20 shadow-sm">
+        <span className="truncate">{placeholder}</span>
+        <span className="bg-[#451db3]/10 text-[#451db3] px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest shadow-sm uppercase">Browse</span>
+      </div>
+    </div>
+  </div>
+);
+
 export default function Documentation() {
   const { isFullAccess, userRole } = useOutletContext();
   const isSuperAdmin = userRole === 'CO Jila Adhyaksh'; // Only CO can validate
@@ -8,6 +24,7 @@ export default function Documentation() {
   const [currentView, setCurrentView] = useState('list'); // 'list', 'upload', 'view', 'validate'
   const [activeProject, setActiveProject] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -15,22 +32,29 @@ export default function Documentation() {
 
   // Mock Database (Expanded for pagination & validation state)
   const [projects, setProjects] = useState([
-    { id: 1, projectName: 'Sample Community Hall', ts: true, patvari: true, admin: true, validated: true },
-    { id: 2, projectName: 'Primary School Renovation', ts: true, patvari: false, admin: false, validated: false },
-    { id: 3, projectName: 'Road Construction Ward 45', ts: false, patvari: false, admin: false, validated: false },
-    { id: 4, projectName: 'Village Dispensary Unit', ts: true, patvari: true, admin: true, validated: false }, // All uploaded, waiting for CO
-    { id: 5, projectName: 'Panchayat Solar Grid', ts: true, patvari: true, admin: false, validated: false },
-    { id: 6, projectName: 'Connecting Bridge Phase 1', ts: true, patvari: true, admin: true, validated: true },
+    { id: 1, workId: 'WRK-2026-800', projectName: 'Sample Community Hall', ts: true, patvari: true, admin: true, validated: true },
+    { id: 2, workId: 'WRK-2026-801', projectName: 'Primary School Renovation', ts: true, patvari: false, admin: false, validated: false },
+    { id: 3, workId: 'WRK-2026-802', projectName: 'Road Construction Ward 45', ts: false, patvari: false, admin: false, validated: false },
+    { id: 4, workId: 'WRK-2026-803', projectName: 'Village Dispensary Unit', ts: true, patvari: true, admin: true, validated: false }, // All uploaded, waiting for CO
+    { id: 5, workId: 'WRK-2026-804', projectName: 'Panchayat Solar Grid', ts: true, patvari: true, admin: false, validated: false },
+    { id: 6, workId: 'WRK-2026-805', projectName: 'Connecting Bridge Phase 1', ts: true, patvari: true, admin: true, validated: true },
   ]);
 
+  // Upload Form State
+  const [uploadData, setUploadData] = useState({ ts: false, patvari: false, admin: false });
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ show: true, message: msg, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+  };
+
   // Reset pagination when search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
   // Handle Search Filtering
   const filteredProjects = projects.filter(proj => 
-    proj.projectName.toLowerCase().includes(searchQuery.toLowerCase())
+    proj.projectName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    proj.workId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Pagination Logic
@@ -41,7 +65,11 @@ export default function Documentation() {
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
 
   // Navigation Handlers
-  const handleOpenUpload = (project) => { setActiveProject(project); setCurrentView('upload'); };
+  const handleOpenUpload = (project) => { 
+    setActiveProject(project); 
+    setUploadData({ ts: project.ts, patvari: project.patvari, admin: project.admin });
+    setCurrentView('upload'); 
+  };
   const handleOpenView = (project) => { setActiveProject(project); setCurrentView('view'); };
   const handleOpenValidate = (project) => { setActiveProject(project); setCurrentView('validate'); };
   const handleBackToList = () => { setActiveProject(null); setCurrentView('list'); };
@@ -53,15 +81,16 @@ export default function Documentation() {
       if (p.id === activeProject.id) {
         return {
           ...p,
-          ts: e.target.ts.checked || p.ts,
-          patvari: e.target.patvari.checked || p.patvari,
-          admin: e.target.admin.checked || p.admin,
+          ts: uploadData.ts,
+          patvari: uploadData.patvari,
+          admin: uploadData.admin,
           validated: false // Reset validation if new docs are uploaded
         };
       }
       return p;
     });
     setProjects(updatedProjects);
+    showToast('Documents uploaded successfully.');
     handleBackToList();
   };
 
@@ -71,91 +100,111 @@ export default function Documentation() {
       p.id === activeProject.id ? { ...p, validated: true } : p
     );
     setProjects(updatedProjects);
+    showToast('Documents officially validated.');
     handleBackToList();
   };
 
+  const inputClass = "w-full rounded-full border border-slate-200 bg-white/50 px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 transition-all outline-none shadow-[0_2px_10px_rgba(0,0,0,0.03)]";
 
   // --- RENDER: LIST VIEW ---
   if (currentView === 'list') {
     return (
-      <div className="space-y-6 pb-10">
+      <div className="space-y-6 pb-10 relative">
         
-        {/* Header Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 border border-gray-200 rounded-xl shadow-sm gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Documentation Control</h2>
-            <p className="text-sm text-gray-500">Manage technical and administrative files.</p>
+        {/* Toast Notification */}
+        {toast.show && (
+          <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom-6 fade-in">
+            <div className={`px-6 py-4 rounded-full shadow-2xl border flex items-center gap-3 ${toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
+              <span className="font-bold">{toast.message}</span>
+            </div>
           </div>
-          <div className="w-full sm:w-auto relative">
+        )}
+
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-wide">Documentation Control</h2>
+            <p className="text-sm font-medium text-slate-500 mt-1">Manage, verify, and officially validate technical and administrative files.</p>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative w-full">
+          <div className="flex-1 w-full relative">
             <input 
               type="text" 
-              placeholder="Search projects..." 
+              placeholder="Search projects by Name or Work ID..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none"
+              className={inputClass} 
             />
           </div>
         </div>
 
         {/* Data Table */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+        <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-in fade-in z-10 relative w-full">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
-              <thead className="bg-gray-50">
+            <table className="min-w-full text-left border-collapse whitespace-nowrap">
+              <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
                 <tr>
-                  <th className="px-6 py-3 font-semibold text-gray-700">Project Name</th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-center">Docs Status</th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-center">Validation</th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">Actions</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-16">S.No</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Project Details</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Docs Status</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Validation</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-slate-100">
                 {currentData.length === 0 ? (
-                  <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-500">No projects match your search.</td></tr>
+                  <tr><td colSpan="5" className="px-8 py-12 text-center text-slate-500 font-bold">No projects match your search.</td></tr>
                 ) : (
-                  currentData.map((proj) => {
+                  currentData.map((proj, index) => {
                     const allDocsPresent = proj.ts && proj.patvari && proj.admin;
                     
                     return (
-                      <tr key={proj.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-gray-900">{proj.projectName}</p>
-                          <div className="flex gap-2 mt-1">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${proj.ts ? 'bg-gray-100 border-gray-200 text-gray-600' : 'bg-red-50 border-red-100 text-red-500'}`}>TS</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${proj.patvari ? 'bg-gray-100 border-gray-200 text-gray-600' : 'bg-red-50 border-red-100 text-red-500'}`}>B1</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${proj.admin ? 'bg-gray-100 border-gray-200 text-gray-600' : 'bg-red-50 border-red-100 text-red-500'}`}>Admin</span>
+                      <tr key={proj.id} className="hover:bg-[#451db3]/5 transition-colors group text-sm">
+                        <td className="px-6 py-5 font-bold text-slate-500 align-middle">
+                          {(currentPage - 1) * itemsPerPage + index + 1}
+                        </td>
+                        <td className="px-6 py-5 align-middle">
+                          <p className="font-black text-slate-900">{proj.projectName}</p>
+                          <p className="text-[10px] font-bold text-slate-400 font-mono mt-1">{proj.workId}</p>
+                          <div className="flex gap-2 mt-2">
+                            <span className={`text-[9px] px-2 py-0.5 rounded border uppercase font-black tracking-widest ${proj.ts ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-red-50 border-red-200 text-red-500'}`}>TS</span>
+                            <span className={`text-[9px] px-2 py-0.5 rounded border uppercase font-black tracking-widest ${proj.patvari ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-red-50 border-red-200 text-red-500'}`}>B1</span>
+                            <span className={`text-[9px] px-2 py-0.5 rounded border uppercase font-black tracking-widest ${proj.admin ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-red-50 border-red-200 text-red-500'}`}>Admin</span>
                           </div>
                         </td>
                         
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${allDocsPresent ? 'bg-gray-100 text-gray-800 border-gray-300' : 'bg-white text-gray-500 border-gray-200 border-dashed'}`}>
-                            {allDocsPresent ? 'All Uploaded' : 'Missing Docs'}
+                        <td className="px-6 py-5 text-center align-middle">
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${allDocsPresent ? 'bg-slate-100 text-slate-600 border-slate-300' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
+                            {allDocsPresent ? 'Ready for Review' : 'Missing Docs'}
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-6 py-5 text-center align-middle">
                           {proj.validated ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-900 text-white border border-gray-900">
+                            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#451db3]/10 text-[#451db3] border border-[#451db3]/20">
                               Validated ✓
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
-                              Pending Review
+                            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-slate-400 border border-slate-200 border-dashed">
+                              Unverified
                             </span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4 text-right space-x-3 whitespace-nowrap">
-                          <button onClick={() => handleOpenView(proj)} className="text-sm font-medium text-gray-600 hover:text-gray-900 underline decoration-gray-300 underline-offset-2">View</button>
+                        <td className="px-6 py-5 text-right space-x-3 whitespace-nowrap align-middle">
+                          <button onClick={() => handleOpenView(proj)} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-[#451db3] transition-colors bg-white border border-slate-200 px-4 py-2 rounded-full shadow-sm">View</button>
                           
                           {/* Sub-Engineers / Local Admins -> Upload */}
                           {!isFullAccess && !proj.validated && (
-                            <button onClick={() => handleOpenUpload(proj)} className="text-sm font-medium text-gray-900 hover:text-gray-600 underline decoration-gray-300 underline-offset-2">Upload</button>
+                            <button onClick={() => handleOpenUpload(proj)} className="text-[10px] font-black uppercase tracking-widest text-[#451db3] hover:text-white hover:bg-[#451db3] transition-colors bg-[#451db3]/10 border border-[#451db3]/20 px-4 py-2 rounded-full shadow-sm">Upload</button>
                           )}
 
                           {/* CO -> Validate */}
                           {isSuperAdmin && !proj.validated && allDocsPresent && (
-                            <button onClick={() => handleOpenValidate(proj)} className="text-sm font-bold text-gray-900 bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Validate</button>
+                            <button onClick={() => handleOpenValidate(proj)} className="text-[10px] font-black uppercase tracking-widest text-white hover:-translate-y-0.5 transition-all bg-gradient-to-r from-[#451db3] to-[#5b2bd9] px-5 py-2 rounded-full shadow-md">Validate</button>
                           )}
                         </td>
                       </tr>
@@ -167,14 +216,14 @@ export default function Documentation() {
           </div>
           
           {/* Pagination Controls */}
-          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500 hidden sm:block">
-              Showing <span className="font-medium text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</span> of <span className="font-medium text-gray-900">{filteredProjects.length}</span> results
+          <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</span> of <span className="text-[#451db3]">{filteredProjects.length}</span>
             </p>
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-              <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">Previous</button>
-              <span className="text-sm text-gray-700 font-medium px-2 sm:hidden">Page {currentPage} / {totalPages || 1}</span>
-              <button onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">Next</button>
+            <div className="flex items-center gap-3">
+              <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Prev</button>
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#451db3]/10 text-[#451db3] font-black text-xs">{currentPage}</div>
+              <button onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Next</button>
             </div>
           </div>
         </div>
@@ -185,45 +234,60 @@ export default function Documentation() {
   // --- RENDER: UPLOAD VIEW ---
   if (currentView === 'upload') {
     return (
-      <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+      <div className="max-w-4xl mx-auto space-y-6 pb-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4 sticky top-4 z-50">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Upload Documents</h3>
-            <p className="text-sm text-gray-500 mt-1">{activeProject.projectName}</p>
+            <button onClick={handleBackToList} className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-[#451db3] transition-colors mb-2 block">← Cancel Upload</button>
+            <h2 className="text-2xl font-black text-slate-800 leading-tight">Upload Documents</h2>
+            <p className="text-sm font-medium text-slate-500 mt-1">For Project: {activeProject.projectName}</p>
           </div>
-          <button onClick={handleBackToList} className="text-sm font-medium text-gray-500 hover:text-gray-900">← Back</button>
         </div>
-        
-        <form onSubmit={handleFileUploadSubmit} className="p-5 sm:p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-gray-200 rounded-lg gap-4">
-            <div><p className="font-medium text-gray-900">Technical Sanction (TS)</p><p className="text-xs text-gray-500">Upload PDF only</p></div>
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              {activeProject.ts && <span className="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded">Uploaded</span>}
-              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="ts" defaultChecked={activeProject.ts} className="w-4 h-4 accent-gray-900" /><span className="text-sm text-gray-600">Simulate</span></label>
-            </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-gray-200 rounded-lg gap-4">
-            <div><p className="font-medium text-gray-900">Patvari B1</p><p className="text-xs text-gray-500">Land record document</p></div>
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              {activeProject.patvari && <span className="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded">Uploaded</span>}
-              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="patvari" defaultChecked={activeProject.patvari} className="w-4 h-4 accent-gray-900" /><span className="text-sm text-gray-600">Simulate</span></label>
-            </div>
-          </div>
+        <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-12 animate-in slide-in-from-right-8 duration-500 w-full">
+          <form onSubmit={handleFileUploadSubmit} className="space-y-8">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Technical Sanction (TS)</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Required PDF Document</p>
+                  </div>
+                  {uploadData.ts && <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Uploaded</span>}
+                </div>
+                <FileInput label="" accept=".pdf" onChange={() => setUploadData({...uploadData, ts: true})} placeholder="Select TS Document" />
+              </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-gray-200 rounded-lg gap-4">
-            <div><p className="font-medium text-gray-900">Administrative Sanction</p><p className="text-xs text-gray-500">Official approval</p></div>
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              {activeProject.admin && <span className="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded">Uploaded</span>}
-              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="admin" defaultChecked={activeProject.admin} className="w-4 h-4 accent-gray-900" /><span className="text-sm text-gray-600">Simulate</span></label>
-            </div>
-          </div>
+              <div className="space-y-4 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Patvari B1</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Land Record PDF</p>
+                  </div>
+                  {uploadData.patvari && <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Uploaded</span>}
+                </div>
+                <FileInput label="" accept=".pdf" onChange={() => setUploadData({...uploadData, patvari: true})} placeholder="Select B1 Document" />
+              </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button type="button" onClick={handleBackToList} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 text-sm font-bold text-white bg-gray-900 rounded-lg hover:bg-gray-800">Save Documents</button>
-          </div>
-        </form>
+              <div className="space-y-4 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 md:col-span-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Administrative Sanction</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Official Approval Document</p>
+                  </div>
+                  {uploadData.admin && <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Uploaded</span>}
+                </div>
+                <FileInput label="" accept=".pdf" onChange={() => setUploadData({...uploadData, admin: true})} placeholder="Select Admin Sanction Document" />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-6 border-t border-slate-100">
+              <button type="submit" className="w-full sm:w-auto px-12 py-4 text-sm font-bold text-white bg-gradient-to-r from-[#451db3] to-[#5b2bd9] rounded-full hover:-translate-y-0.5 transition-all shadow-[0_8px_20px_rgba(69,29,179,0.25)]">
+                Save & Update Documents ✓
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     );
   }
@@ -231,27 +295,27 @@ export default function Documentation() {
   // --- RENDER: VIEW VIEW ---
   if (currentView === 'view') {
     return (
-      <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+      <div className="max-w-4xl mx-auto space-y-6 pb-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4 sticky top-4 z-50">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Document Viewer</h3>
-            <p className="text-sm text-gray-500 mt-1">{activeProject.projectName}</p>
+            <button onClick={handleBackToList} className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-[#451db3] transition-colors mb-2 block">← Back to List</button>
+            <h2 className="text-2xl font-black text-slate-800 leading-tight">Document Viewer</h2>
+            <p className="text-sm font-medium text-slate-500 mt-1">{activeProject.projectName}</p>
           </div>
-          <button onClick={handleBackToList} className="text-sm font-medium text-gray-500 hover:text-gray-900">← Back</button>
         </div>
         
-        <div className="p-5 sm:p-6 space-y-4">
-          <div className="p-4 border border-gray-200 rounded-lg flex justify-between items-center">
-            <span className="font-medium text-gray-900">Technical Sanction (TS)</span>
-            {activeProject.ts ? <button className="text-sm text-gray-600 underline">View PDF</button> : <span className="text-sm text-gray-400">Missing</span>}
+        <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-12 animate-in slide-in-from-right-8 duration-500 w-full space-y-6">
+          <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-3xl flex justify-between items-center">
+            <span className="font-black text-slate-800 uppercase tracking-widest text-sm">Technical Sanction (TS)</span>
+            {activeProject.ts ? <button className="text-[10px] font-black text-[#451db3] uppercase tracking-widest bg-[#451db3]/10 px-5 py-2.5 rounded-full hover:bg-[#451db3] hover:text-white transition-all shadow-sm">View PDF</button> : <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 px-4 py-2 rounded-full border border-red-200">Missing</span>}
           </div>
-          <div className="p-4 border border-gray-200 rounded-lg flex justify-between items-center">
-            <span className="font-medium text-gray-900">Patvari B1</span>
-            {activeProject.patvari ? <button className="text-sm text-gray-600 underline">View PDF</button> : <span className="text-sm text-gray-400">Missing</span>}
+          <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-3xl flex justify-between items-center">
+            <span className="font-black text-slate-800 uppercase tracking-widest text-sm">Patvari B1</span>
+            {activeProject.patvari ? <button className="text-[10px] font-black text-[#451db3] uppercase tracking-widest bg-[#451db3]/10 px-5 py-2.5 rounded-full hover:bg-[#451db3] hover:text-white transition-all shadow-sm">View PDF</button> : <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 px-4 py-2 rounded-full border border-red-200">Missing</span>}
           </div>
-          <div className="p-4 border border-gray-200 rounded-lg flex justify-between items-center">
-            <span className="font-medium text-gray-900">Administrative Sanction</span>
-            {activeProject.admin ? <button className="text-sm text-gray-600 underline">View PDF</button> : <span className="text-sm text-gray-400">Missing</span>}
+          <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-3xl flex justify-between items-center">
+            <span className="font-black text-slate-800 uppercase tracking-widest text-sm">Administrative Sanction</span>
+            {activeProject.admin ? <button className="text-[10px] font-black text-[#451db3] uppercase tracking-widest bg-[#451db3]/10 px-5 py-2.5 rounded-full hover:bg-[#451db3] hover:text-white transition-all shadow-sm">View PDF</button> : <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 px-4 py-2 rounded-full border border-red-200">Missing</span>}
           </div>
         </div>
       </div>
@@ -261,48 +325,51 @@ export default function Documentation() {
   // --- RENDER: VALIDATE VIEW (CO ONLY) ---
   if (currentView === 'validate') {
     return (
-      <div className="max-w-3xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-10">
-        <div className="p-5 sm:p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+      <div className="max-w-4xl mx-auto space-y-6 pb-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4 sticky top-4 z-50">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Document Validation</h3>
-            <p className="text-sm text-gray-500 mt-1">{activeProject.projectName}</p>
+            <button onClick={handleBackToList} className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-[#451db3] transition-colors mb-2 block">← Cancel Validation</button>
+            <h2 className="text-2xl font-black text-slate-800 leading-tight">Document Validation</h2>
+            <p className="text-sm font-medium text-slate-500 mt-1">{activeProject.projectName}</p>
           </div>
-          <button onClick={handleBackToList} className="text-sm font-medium text-gray-500 hover:text-gray-900">← Back</button>
         </div>
         
-        <div className="p-5 sm:p-6">
-          <p className="text-sm text-gray-600 mb-6">Review the submitted documents below. Once confirmed, you can officially validate this project's paperwork.</p>
+        <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-12 animate-in slide-in-from-right-8 duration-500 w-full">
+          <p className="text-sm font-bold text-slate-500 mb-8 border-b border-slate-100 pb-6">Review the submitted documents below. Once confirmed, you can officially validate this project's paperwork.</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2">
-              <span className="text-3xl">📄</span>
-              <p className="font-bold text-gray-900 text-sm">Tech Sanction</p>
-              <button className="text-xs text-gray-500 hover:text-gray-900 underline">Preview</button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white border border-slate-200 p-6 rounded-3xl text-center flex flex-col items-center justify-center gap-3 shadow-sm hover:border-[#451db3]/30 transition-all cursor-pointer">
+              <span className="text-4xl text-[#451db3]">📄</span>
+              <p className="font-black text-slate-900 text-sm uppercase tracking-widest">Tech Sanction</p>
+              <button className="text-[10px] font-black text-slate-500 hover:text-[#451db3] uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full mt-2">Preview PDF</button>
             </div>
-            <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2">
-              <span className="text-3xl">📄</span>
-              <p className="font-bold text-gray-900 text-sm">Patvari B1</p>
-              <button className="text-xs text-gray-500 hover:text-gray-900 underline">Preview</button>
+            <div className="bg-white border border-slate-200 p-6 rounded-3xl text-center flex flex-col items-center justify-center gap-3 shadow-sm hover:border-[#451db3]/30 transition-all cursor-pointer">
+              <span className="text-4xl text-[#451db3]">📄</span>
+              <p className="font-black text-slate-900 text-sm uppercase tracking-widest">Patvari B1</p>
+              <button className="text-[10px] font-black text-slate-500 hover:text-[#451db3] uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full mt-2">Preview PDF</button>
             </div>
-            <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-center flex flex-col items-center justify-center gap-2">
-              <span className="text-3xl">📄</span>
-              <p className="font-bold text-gray-900 text-sm">Admin Sanction</p>
-              <button className="text-xs text-gray-500 hover:text-gray-900 underline">Preview</button>
+            <div className="bg-white border border-slate-200 p-6 rounded-3xl text-center flex flex-col items-center justify-center gap-3 shadow-sm hover:border-[#451db3]/30 transition-all cursor-pointer">
+              <span className="text-4xl text-[#451db3]">📄</span>
+              <p className="font-black text-slate-900 text-sm uppercase tracking-widest">Admin Sanction</p>
+              <button className="text-[10px] font-black text-slate-500 hover:text-[#451db3] uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full mt-2">Preview PDF</button>
             </div>
           </div>
 
-          <form onSubmit={handleValidationSubmit} className="bg-gray-50 p-5 rounded-xl border border-gray-200">
-            <h4 className="font-bold text-gray-900 mb-3">Official Sign-off</h4>
-            <div className="space-y-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" required className="mt-1 w-5 h-5 accent-gray-900 shrink-0" />
-                <span className="text-sm text-gray-700 leading-relaxed">
+          <form onSubmit={handleValidationSubmit} className="bg-[#451db3]/5 p-8 rounded-3xl border border-[#451db3]/10">
+            <h4 className="font-black text-[#451db3] uppercase tracking-widest mb-4">Official Sign-off</h4>
+            <div className="space-y-6">
+              <label className="flex items-start gap-4 cursor-pointer group">
+                <div className="relative flex items-center justify-center w-6 h-6 shrink-0 mt-0.5">
+                  <input type="checkbox" required className="peer appearance-none w-6 h-6 border-2 border-slate-300 rounded-md checked:bg-[#451db3] checked:border-[#451db3] transition-all cursor-pointer" />
+                  <svg className="absolute w-4 h-4 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span className="text-sm font-bold text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">
                   I confirm that I have reviewed the Technical Sanction, Patvari B1, and Administrative Sanction documents. They are valid, legible, and accurate for this project.
                 </span>
               </label>
-              <div className="flex justify-end pt-2">
-                <button type="submit" className="w-full sm:w-auto px-6 py-2.5 text-sm font-bold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shadow-sm">
-                  Confirm & Validate Documents
+              <div className="flex justify-end pt-4">
+                <button type="submit" className="w-full sm:w-auto px-10 py-4 text-sm font-bold text-white bg-gradient-to-r from-[#451db3] to-[#5b2bd9] rounded-full shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:-translate-y-0.5 transition-all">
+                  Confirm & Validate Documents ✓
                 </button>
               </div>
             </div>

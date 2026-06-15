@@ -1,5 +1,6 @@
 export const ROLES = {
-  CO_JILA_ADHYAKSH: 'CO Jila Adhyaksh',
+  CEO_JILA_PANCHAYAT: 'CEO Jila Panchayat',
+  JILA_PANCHAYAT: 'Jila Panchayat',
   JANPAD: 'Janpad',
   GRAM_PANCHAYAT: 'Gram Panchayat',
   ENGINEER: 'Engineer',
@@ -8,7 +9,8 @@ export const ROLES = {
 };
 
 export const ROLE_ACCESS = {
-  [ROLES.CO_JILA_ADHYAKSH]: 'FULL',
+  [ROLES.CEO_JILA_PANCHAYAT]: 'FULL',
+  [ROLES.JILA_PANCHAYAT]: 'FULL',
   [ROLES.JANPAD]: 'FULL',
   [ROLES.GRAM_PANCHAYAT]: 'FULL',
   [ROLES.ENGINEER]: 'LIMITED',

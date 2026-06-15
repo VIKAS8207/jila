@@ -9,7 +9,7 @@ export default function Login() {
   const [currentView, setCurrentView] = useState('login');
 
   // Form States
-  const [role, setRole] = useState(ROLES.CO_JILA_ADHYAKSH);
+  const [role, setRole] = useState(ROLES.CEO_JILA_PANCHAYAT);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -69,9 +69,15 @@ export default function Login() {
   // --- Custom Dropdown Data ---
   const roleGroups = [
     {
+      label: 'Verifying Authority (Full Access)',
+      options: [
+        { value: ROLES.CEO_JILA_PANCHAYAT, display: ROLES.CEO_JILA_PANCHAYAT }
+      ]
+    },
+    {
       label: 'Administrative (Full Access)',
       options: [
-        { value: ROLES.CO_JILA_ADHYAKSH, display: 'CEO Jila Panchayat' },
+        { value: ROLES.JILA_PANCHAYAT, display: ROLES.JILA_PANCHAYAT },
         { value: ROLES.JANPAD, display: ROLES.JANPAD },
         { value: ROLES.GRAM_PANCHAYAT, display: ROLES.GRAM_PANCHAYAT }
       ]
