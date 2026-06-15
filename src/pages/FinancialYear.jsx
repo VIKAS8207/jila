@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, Navigate } from 'react-router-dom';
 
 // --- REUSABLE CUSTOM DROPDOWN ---
@@ -54,7 +54,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, disabled = fals
   );
 };
 
-export default function GramPanchayat() {
+export default function FinancialYear() {
   const { isFullAccess } = useOutletContext();
   
   // Security check: Only Full Access admins can view this page
@@ -68,29 +68,20 @@ export default function GramPanchayat() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
-    name: '', dob: '', email: '', type: '', panchayat: ''
+    yearLabel: '', startDate: '', endDate: '', status: 'Active'
   });
 
-  // Mock Database: Gram Panchayat Personnel (adapted from your existing data)
-  const [records, setRecords] = useState([
-    { id: 1, name: 'R. Kumar', dob: '1985-06-15', email: 'rkumar@example.com', type: 'Civil', panchayat: 'Abhanpur' },
-    { id: 2, name: 'S. Singh', dob: '1990-02-20', email: 'ssingh@example.com', type: 'Mechanical', panchayat: 'Arang' },
-    { id: 3, name: 'A. Patel', dob: '1988-11-05', email: 'apatel@example.com', type: 'Electrical', panchayat: 'Tilda' },
-    { id: 4, name: 'V. Sharma', dob: '1992-08-10', email: 'vsharma@example.com', type: 'Civil', panchayat: 'Abhanpur' },
+  // Mock Database: Financial Years
+  const [financialYears, setFinancialYears] = useState([
+    { id: 1, yearLabel: '2026-2027', startDate: '2026-04-01', endDate: '2027-03-31', status: 'Active' },
+    { id: 2, yearLabel: '2025-2026', startDate: '2025-04-01', endDate: '2026-03-31', status: 'Active' },
+    { id: 3, yearLabel: '2024-2025', startDate: '2024-04-01', endDate: '2025-03-31', status: 'Inactive' },
+    { id: 4, yearLabel: '2023-2024', startDate: '2023-04-01', endDate: '2024-03-31', status: 'Inactive' },
   ]);
-
-  // Calculate dynamic stats: Total per Panchayat
-  const panchayatStats = useMemo(() => {
-    const stats = {};
-    records.forEach(rec => {
-      stats[rec.panchayat] = (stats[rec.panchayat] || 0) + 1;
-    });
-    return Object.entries(stats).sort((a, b) => b[1] - a[1]);
-  }, [records]);
 
   const showToast = (msg) => {
     setToast({ show: true, message: msg });
@@ -98,14 +89,14 @@ export default function GramPanchayat() {
   };
 
   // --- FILTERING & PAGINATION LOGIC ---
-  const filteredRecords = records.filter(rec => {
-    const matchesSearch = rec.name.toLowerCase().includes(searchQuery.toLowerCase()) || rec.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === '' || rec.type === typeFilter;
-    return matchesSearch && matchesType;
+  const filteredYears = financialYears.filter(fy => {
+    const matchesSearch = fy.yearLabel.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === '' || fy.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
-  const currentData = filteredRecords.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filteredYears.length / itemsPerPage);
+  const currentData = filteredYears.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
@@ -113,12 +104,26 @@ export default function GramPanchayat() {
   // --- HANDLERS ---
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newRecord = { ...formData, id: Date.now() };
-    setRecords([newRecord, ...records]);
+    if (!formData.status) {
+      alert("Please select a Status.");
+      return;
+    }
+    const newYear = { ...formData, id: Date.now() };
+    setFinancialYears([newYear, ...financialYears]);
     setView('list');
-    setFormData({ name: '', dob: '', email: '', type: '', panchayat: '' });
+    setFormData({ yearLabel: '', startDate: '', endDate: '', status: 'Active' });
     setCurrentPage(1);
-    showToast('New Personnel Registered Successfully ✓');
+    showToast('New Financial Year Registered Successfully ✓');
+  };
+
+  const handleToggleStatus = (id) => {
+    setFinancialYears(financialYears.map(fy => {
+      if (fy.id === id) {
+        return { ...fy, status: fy.status === 'Active' ? 'Inactive' : 'Active' };
+      }
+      return fy;
+    }));
+    showToast('Status Updated Successfully!');
   };
 
   const inputClass = "w-full rounded-full border border-slate-200 bg-white/50 px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 transition-all outline-none shadow-[0_2px_10px_rgba(0,0,0,0.03)]";
@@ -141,19 +146,19 @@ export default function GramPanchayat() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-wide">Gram Panchayat Master</h2>
-          <p className="text-sm font-medium text-slate-500 mt-1">Manage Gram Panchayat personnel and assignments.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-wide">Financial Year Master</h2>
+          <p className="text-sm font-medium text-slate-500 mt-1">Manage project timelines and active financial accounting periods.</p>
         </div>
         {view === 'list' ? (
           <button 
             onClick={() => setView('form')}
             className="bg-gradient-to-r from-[#451db3] to-[#5b2bd9] hover:from-[#3a1796] hover:to-[#451db3] text-white px-8 py-3.5 rounded-full text-sm font-bold transition-all transform hover:scale-[1.02] shadow-[0_8px_20px_rgba(69,29,179,0.25)] shrink-0"
           >
-            + Add Gram Panchayat
+            + Add Financial Year
           </button>
         ) : (
           <button 
-            onClick={() => { setView('list'); setFormData({ name: '', dob: '', email: '', type: '', panchayat: '' }); }} 
+            onClick={() => { setView('list'); setFormData({ yearLabel: '', startDate: '', endDate: '', status: 'Active' }); }} 
             className="text-sm font-bold text-slate-400 hover:text-[#451db3] transition-colors"
           >
             Cancel ✕
@@ -162,37 +167,16 @@ export default function GramPanchayat() {
       </div>
 
       {/* ======================================================= */}
-      {/* VIEW: LIST DIRECTORY */}
+      {/* VIEW: LIST FINANCIAL YEARS */}
       {/* ======================================================= */}
       {view === 'list' && (
         <>
-          {/* Dynamic Summary Cards */}
-          <div className="bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] w-full">
-            <h3 className="text-[10px] font-black text-[#451db3] uppercase tracking-widest mb-4">Deployment Statistics</h3>
-            <div className="flex flex-wrap gap-4 items-center">
-              <div className="bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white px-5 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
-                <span className="text-[11px] font-black uppercase tracking-widest">Total Records</span>
-                <span className="text-2xl font-black">{records.length}</span>
-              </div>
-              <div className="w-px bg-slate-200 h-10 mx-2 hidden sm:block"></div>
-              
-              {panchayatStats.map(([panchayat, count]) => (
-                <div key={panchayat} className="bg-white border border-slate-200 px-4 py-2.5 rounded-2xl flex items-center gap-3 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-                  <span className="text-xs font-bold text-slate-600">{panchayat}</span>
-                  <span className="text-sm font-black text-[#451db3] bg-[#451db3]/10 border border-[#451db3]/20 w-8 h-8 rounded-full flex items-center justify-center">
-                    {count}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Search & Filter Bar */}
           <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative w-full">
             <div className="flex-1 w-full relative">
               <input 
                 type="text" 
-                placeholder="Search by Name or Email..." 
+                placeholder="Search by Year (e.g. 2026)..." 
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 className={inputClass} 
@@ -200,10 +184,10 @@ export default function GramPanchayat() {
             </div>
             <div className="w-full md:w-64 shrink-0">
               <CustomDropdown 
-                placeholder="All Specializations"
-                value={typeFilter}
-                onChange={(val) => { setTypeFilter(val); setCurrentPage(1); }}
-                options={['Civil', 'Mechanical', 'Electrical']}
+                placeholder="All Statuses"
+                value={statusFilter}
+                onChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
+                options={['Active', 'Inactive']}
               />
             </div>
           </div>
@@ -215,41 +199,48 @@ export default function GramPanchayat() {
                 <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
                   <tr>
                     <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-16">S.No</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Name</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Contact / DOB</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Specialization</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-right">Assigned Gram</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-1/3">Financial Year</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Operating Period</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Status</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {currentData.length === 0 ? (
-                    <tr><td colSpan="5" className="px-8 py-12 text-center text-slate-500 font-bold">No records found matching criteria.</td></tr>
+                    <tr><td colSpan="5" className="px-8 py-12 text-center text-slate-500 font-bold">No records match your search.</td></tr>
                   ) : (
-                    currentData.map((rec, index) => (
-                      <tr key={rec.id} className="hover:bg-[#451db3]/5 transition-colors group">
-                        <td className="px-6 py-5 font-bold text-slate-500">
+                    currentData.map((fy, index) => (
+                      <tr key={fy.id} className="hover:bg-[#451db3]/5 transition-colors group">
+                        <td className="px-6 py-5 font-bold text-slate-500 align-middle">
                           {(currentPage - 1) * itemsPerPage + index + 1}
                         </td>
-                        <td className="px-6 py-5">
-                          <p className="font-black text-slate-900 text-sm">{rec.name}</p>
+                        <td className="px-6 py-5 align-middle">
+                          <p className="font-black text-slate-900 text-lg">{fy.yearLabel}</p>
                         </td>
-                        <td className="px-6 py-5">
-                          <p className="text-sm font-bold text-slate-700">{rec.email}</p>
-                          <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">DOB: {rec.dob}</p>
+                        <td className="px-6 py-5 align-middle">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs font-bold text-slate-600">Start: <span className="font-mono text-slate-800">{fy.startDate}</span></span>
+                            <span className="text-xs font-bold text-slate-600">End: &nbsp;&nbsp;<span className="font-mono text-slate-800">{fy.endDate}</span></span>
+                          </div>
                         </td>
-                        <td className="px-6 py-5 text-center">
-                          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                            rec.type === 'Civil' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                            rec.type === 'Mechanical' ? 'bg-slate-100 text-slate-700 border-slate-300' : 
-                            'bg-blue-50 text-blue-700 border-blue-200'
+                        <td className="px-6 py-5 text-center align-middle">
+                          <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                            fy.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
                           }`}>
-                            {rec.type}
+                            {fy.status}
                           </span>
                         </td>
-                        <td className="px-6 py-5 text-right font-medium text-slate-600">
-                          <span className="bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-bold text-slate-700 shadow-sm">
-                            📍 {rec.panchayat}
-                          </span>
+                        <td className="px-6 py-5 text-center align-middle">
+                          <button 
+                            onClick={() => handleToggleStatus(fy.id)}
+                            className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
+                              fy.status === 'Active' 
+                                ? 'bg-white border border-red-200 text-red-500 hover:bg-red-50' 
+                                : 'bg-[#451db3]/10 text-[#451db3] hover:bg-[#451db3] hover:text-white'
+                            }`}
+                          >
+                            {fy.status === 'Active' ? 'Mark Inactive' : 'Set Active'}
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -261,7 +252,7 @@ export default function GramPanchayat() {
             {/* Pagination Controls */}
             <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredRecords.length)}</span> of <span className="text-[#451db3]">{filteredRecords.length}</span>
+                Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredYears.length)}</span> of <span className="text-[#451db3]">{filteredYears.length}</span>
               </p>
               <div className="flex items-center gap-3">
                 <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Prev</button>
@@ -274,90 +265,77 @@ export default function GramPanchayat() {
       )}
 
       {/* ======================================================= */}
-      {/* VIEW: ADD PERSONNEL FORM */}
+      {/* VIEW: NEW FINANCIAL YEAR FORM */}
       {/* ======================================================= */}
       {view === 'form' && (
         <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-12 animate-in slide-in-from-right-8 duration-500 w-full">
           
           <div className="mb-8 border-b border-slate-100 pb-6">
-            <h3 className="text-2xl font-black text-slate-800">Register New Gram Panchayat</h3>
-            <p className="text-sm font-medium text-slate-500 mt-2">Enter official details to induct a new member into the master directory.</p>
+            <h3 className="text-2xl font-black text-slate-800">Register Financial Year</h3>
+            <p className="text-sm font-medium text-slate-500 mt-2">Define a new accounting and operational period for the system.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             
-            {/* Personal Details Row */}
+            {/* Year Label & Status */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Full Name <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Financial Year Label <span className="text-red-500">*</span></label>
                 <input 
                   type="text" required 
-                  placeholder="e.g. S. Kumar"
-                  value={formData.name} 
-                  onChange={e => setFormData({...formData, name: e.target.value})} 
-                  className={inputClass} 
+                  placeholder="e.g., 2026-2027"
+                  value={formData.yearLabel} 
+                  onChange={e => setFormData({...formData, yearLabel: e.target.value})} 
+                  className={`${inputClass} font-mono`} 
                 />
               </div>
-              <div className="space-y-2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Date of Birth <span className="text-red-500">*</span></label>
-                <input 
-                  type="date" required 
-                  value={formData.dob} 
-                  onChange={e => setFormData({...formData, dob: e.target.value})} 
-                  className={inputClass} 
-                />
-              </div>
-            </div>
-
-            {/* Email Address */}
-            <div className="space-y-2">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Official Email Address <span className="text-red-500">*</span></label>
-              <input 
-                type="email" required 
-                placeholder="member@govt.in"
-                value={formData.email} 
-                onChange={e => setFormData({...formData, email: e.target.value})} 
-                className={inputClass} 
-              />
-            </div>
-
-            {/* Professional Details Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2 relative z-50">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Discipline / Type <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Initial Status <span className="text-red-500">*</span></label>
                 <CustomDropdown 
-                  placeholder="Select Discipline"
-                  value={formData.type}
-                  onChange={(val) => setFormData({...formData, type: val})}
-                  options={['Civil', 'Mechanical', 'Electrical']}
+                  placeholder="Select Status"
+                  value={formData.status}
+                  onChange={(val) => setFormData({...formData, status: val})}
+                  options={['Active', 'Inactive']}
+                />
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-40">
+              <div className="space-y-2">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Start Date <span className="text-red-500">*</span></label>
+                <input 
+                  type="date" required
+                  value={formData.startDate} 
+                  onChange={e => setFormData({...formData, startDate: e.target.value})} 
+                  className={inputClass} 
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Assign Gram Panchayat <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">End Date <span className="text-red-500">*</span></label>
                 <input 
-                  type="text" required 
-                  placeholder="e.g. Abhanpur"
-                  value={formData.panchayat} 
-                  onChange={e => setFormData({...formData, panchayat: e.target.value})} 
+                  type="date" required
+                  value={formData.endDate} 
+                  onChange={e => setFormData({...formData, endDate: e.target.value})} 
                   className={inputClass} 
                 />
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+            <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-30">
               <button 
                 type="button" 
-                onClick={() => { setView('list'); setFormData({ name: '', dob: '', email: '', type: '', panchayat: '' }); }} 
+                onClick={() => { setView('list'); setFormData({ yearLabel: '', startDate: '', endDate: '', status: 'Active' }); }} 
                 className="w-full sm:w-auto px-8 py-4 rounded-full text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors"
               >
-                ← Cancel Registration
+                ← Cancel
               </button>
               <button 
                 type="submit" 
                 className="w-full sm:w-auto px-12 py-4 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-sm font-bold shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:-translate-y-0.5 transition-all"
               >
-                Register Personnel ✓
+                Register Financial Year ✓
               </button>
             </div>
 

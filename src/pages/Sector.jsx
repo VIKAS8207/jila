@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useOutletContext, Navigate } from 'react-router-dom';
 
-export default function Scheme() {
+export default function Sector() {
   const { isFullAccess } = useOutletContext();
   
   // Security check: Only Full Access admins can view this page
@@ -11,24 +11,24 @@ export default function Scheme() {
   const [view, setView] = useState('list'); // 'list' | 'form'
   const [toast, setToast] = useState({ show: false, message: '' });
 
-  // Pagination State
+  // Pagination & Filter States
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [searchQuery, setSearchQuery] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
-    name: '', startDate: '', endDate: '', description: ''
+    name: '', description: ''
   });
 
-  // Mock Database: Schemes (Expanded for Pagination)
-  const [schemes, setSchemes] = useState([
-    { id: 1, name: 'National Health Mission', startDate: '2025-04-01', endDate: '2030-03-31', description: 'Upgrading primary healthcare infrastructure across rural sectors.' },
-    { id: 2, name: 'PMGSY (Pradhan Mantri Gram Sadak Yojana)', startDate: '', endDate: '', description: 'Providing good all-weather road connectivity to unconnected villages.' },
-    { id: 3, name: 'Jal Jeevan Mission', startDate: '2024-01-01', endDate: '2027-12-31', description: 'Ensuring safe and adequate drinking water through individual household tap connections.' },
-    { id: 4, name: 'Swachh Bharat Abhiyan', startDate: '2024-05-01', endDate: '2029-05-01', description: 'Accelerating the efforts to achieve universal sanitation coverage.' },
-    { id: 5, name: 'Awas Yojana (Gramin)', startDate: '2023-01-01', endDate: '2028-12-31', description: 'Providing pucca houses to all houseless households.' },
-    { id: 6, name: 'Digital India Land Records', startDate: '2025-01-01', endDate: '', description: 'Modernization of land records system in the state.' }
+  // Mock Database: Sectors
+  const [sectors, setSectors] = useState([
+    { id: 1, name: 'Health', description: 'Healthcare facilities, rural dispensaries, and hospitals.' },
+    { id: 2, name: 'Infrastructure', description: 'Roads, bridges, community halls, and public parks.' },
+    { id: 3, name: 'Education', description: 'Primary schools, high schools, and educational institutes.' },
+    { id: 4, name: 'Welfare', description: 'Community development centers and public welfare initiatives.' },
+    { id: 5, name: 'Sanitation', description: 'Public toilets, drainage systems, and waste management.' },
+    { id: 6, name: 'Agriculture', description: 'Irrigation facilities, seed storage, and farming infrastructure.' },
   ]);
 
   const showToast = (msg) => {
@@ -37,13 +37,13 @@ export default function Scheme() {
   };
 
   // --- FILTERING & PAGINATION LOGIC ---
-  const filteredSchemes = schemes.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSectors = sectors.filter(sec => {
+    const matchesSearch = sec.name.toLowerCase().includes(searchQuery.toLowerCase()) || sec.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
-  const totalPages = Math.ceil(filteredSchemes.length / itemsPerPage);
-  const currentData = filteredSchemes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filteredSectors.length / itemsPerPage);
+  const currentData = filteredSectors.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
@@ -51,12 +51,12 @@ export default function Scheme() {
   // --- HANDLERS ---
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newScheme = { ...formData, id: Date.now() };
-    setSchemes([newScheme, ...schemes]);
+    const newSector = { ...formData, id: Date.now() };
+    setSectors([newSector, ...sectors]);
     setView('list');
-    setFormData({ name: '', startDate: '', endDate: '', description: '' });
+    setFormData({ name: '', description: '' });
     setCurrentPage(1);
-    showToast('New Scheme Registered Successfully ✓');
+    showToast('New Sector Registered Successfully ✓');
   };
 
   const inputClass = "w-full rounded-full border border-slate-200 bg-white/50 px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 transition-all outline-none shadow-[0_2px_10px_rgba(0,0,0,0.03)]";
@@ -79,19 +79,19 @@ export default function Scheme() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/60 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-wide">Scheme Master</h2>
-          <p className="text-sm font-medium text-slate-500 mt-1">Manage government schemes, active periods, and funding categories.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-wide">Sector Master</h2>
+          <p className="text-sm font-medium text-slate-500 mt-1">Manage project domains and categorization sectors.</p>
         </div>
         {view === 'list' ? (
           <button 
             onClick={() => setView('form')}
             className="bg-gradient-to-r from-[#451db3] to-[#5b2bd9] hover:from-[#3a1796] hover:to-[#451db3] text-white px-8 py-3.5 rounded-full text-sm font-bold transition-all transform hover:scale-[1.02] shadow-[0_8px_20px_rgba(69,29,179,0.25)] shrink-0"
           >
-            + New Scheme
+            + Add Sector
           </button>
         ) : (
           <button 
-            onClick={() => { setView('list'); setFormData({ name: '', startDate: '', endDate: '', description: '' }); }} 
+            onClick={() => { setView('list'); setFormData({ name: '', description: '' }); }} 
             className="text-sm font-bold text-slate-400 hover:text-[#451db3] transition-colors"
           >
             Cancel ✕
@@ -100,24 +100,24 @@ export default function Scheme() {
       </div>
 
       {/* ======================================================= */}
-      {/* VIEW: LIST SCHEMES */}
+      {/* VIEW: LIST SECTORS */}
       {/* ======================================================= */}
       {view === 'list' && (
         <>
-          {/* Search Bar */}
+          {/* Search & Summary Bar */}
           <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative w-full">
             <div className="flex-1 w-full relative">
               <input 
                 type="text" 
-                placeholder="Search Schemes by Name or Description..." 
+                placeholder="Search Sectors by Name or Description..." 
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 className={inputClass} 
               />
             </div>
             <div className="bg-[#451db3]/5 border border-[#451db3]/10 px-6 py-3 rounded-full text-center shrink-0">
-              <span className="text-[10px] text-[#451db3] uppercase font-black tracking-widest mr-2">Total Schemes</span>
-              <span className="text-lg font-black text-slate-900">{schemes.length}</span>
+              <span className="text-[10px] text-[#451db3] uppercase font-black tracking-widest mr-2">Total Sectors</span>
+              <span className="text-lg font-black text-slate-900">{sectors.length}</span>
             </div>
           </div>
 
@@ -128,41 +128,24 @@ export default function Scheme() {
                 <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
                   <tr>
                     <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-16">S.No</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-1/3">Scheme Name</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Description</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-48 text-right">Active Period</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-1/4">Sector Name</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Description / Scope</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {currentData.length === 0 ? (
-                    <tr><td colSpan="4" className="px-8 py-12 text-center text-slate-500 font-bold">No schemes match your search.</td></tr>
+                    <tr><td colSpan="3" className="px-8 py-12 text-center text-slate-500 font-bold">No sectors match your search.</td></tr>
                   ) : (
-                    currentData.map((s, index) => (
-                      <tr key={s.id} className="hover:bg-[#451db3]/5 transition-colors group">
+                    currentData.map((sec, index) => (
+                      <tr key={sec.id} className="hover:bg-[#451db3]/5 transition-colors group">
                         <td className="px-6 py-5 font-bold text-slate-500 align-top">
                           {(currentPage - 1) * itemsPerPage + index + 1}
                         </td>
                         <td className="px-6 py-5 align-top">
-                          <p className="font-black text-slate-900 text-sm whitespace-normal">{s.name}</p>
+                          <p className="font-black text-slate-900 text-sm whitespace-normal">{sec.name}</p>
                         </td>
                         <td className="px-6 py-5 align-top">
-                          <p className="text-sm font-medium text-slate-600 whitespace-normal leading-relaxed">{s.description}</p>
-                        </td>
-                        <td className="px-6 py-5 align-top text-right">
-                          {s.startDate || s.endDate ? (
-                            <div className="inline-flex flex-col items-end gap-1">
-                              <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-green-200">
-                                Start: {s.startDate || 'N/A'}
-                              </span>
-                              <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-red-200">
-                                End: {s.endDate || 'N/A'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
-                              Continuous
-                            </span>
-                          )}
+                          <p className="text-sm font-medium text-slate-600 whitespace-normal leading-relaxed">{sec.description}</p>
                         </td>
                       </tr>
                     ))
@@ -174,7 +157,7 @@ export default function Scheme() {
             {/* Pagination Controls */}
             <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredSchemes.length)}</span> of <span className="text-[#451db3]">{filteredSchemes.length}</span>
+                Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredSectors.length)}</span> of <span className="text-[#451db3]">{filteredSectors.length}</span>
               </p>
               <div className="flex items-center gap-3">
                 <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Prev</button>
@@ -187,65 +170,37 @@ export default function Scheme() {
       )}
 
       {/* ======================================================= */}
-      {/* VIEW: NEW SCHEME FORM */}
+      {/* VIEW: NEW SECTOR FORM */}
       {/* ======================================================= */}
       {view === 'form' && (
         <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-12 animate-in slide-in-from-right-8 duration-500 w-full">
           
           <div className="mb-8 border-b border-slate-100 pb-6">
-            <h3 className="text-2xl font-black text-slate-800">Register New Scheme</h3>
-            <p className="text-sm font-medium text-slate-500 mt-2">Fill in the details to add a new funding category to the system.</p>
+            <h3 className="text-2xl font-black text-slate-800">Register New Sector</h3>
+            <p className="text-sm font-medium text-slate-500 mt-2">Define a new project domain category for the system.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             
-            {/* Scheme Name */}
+            {/* Sector Name */}
             <div className="space-y-2">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Scheme Name <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sector Name <span className="text-red-500">*</span></label>
               <input 
                 type="text" required 
-                placeholder="e.g., Jal Jeevan Mission"
+                placeholder="e.g., Health, Infrastructure"
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
                 className={inputClass} 
               />
             </div>
 
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="block flex justify-between text-xs font-black text-slate-400 uppercase tracking-widest pl-2">
-                  <span>Start Date</span>
-                  <span className="text-[10px] font-normal text-slate-400">(Optional)</span>
-                </label>
-                <input 
-                  type="date" 
-                  value={formData.startDate} 
-                  onChange={e => setFormData({...formData, startDate: e.target.value})} 
-                  className={inputClass} 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block flex justify-between text-xs font-black text-slate-400 uppercase tracking-widest pl-2">
-                  <span>End Date</span>
-                  <span className="text-[10px] font-normal text-slate-400">(Optional)</span>
-                </label>
-                <input 
-                  type="date" 
-                  value={formData.endDate} 
-                  onChange={e => setFormData({...formData, endDate: e.target.value})} 
-                  className={inputClass} 
-                />
-              </div>
-            </div>
-
             {/* Description */}
             <div className="space-y-2">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Description <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Description / Scope <span className="text-red-500">*</span></label>
               <textarea 
                 required 
                 rows="4" 
-                placeholder="Describe the purpose and goals of this scheme..."
+                placeholder="Briefly describe what kind of projects fall under this sector (e.g. 'This is a hospital project...')"
                 value={formData.description} 
                 onChange={e => setFormData({...formData, description: e.target.value})} 
                 className={`${inputClass} rounded-3xl resize-none py-4`}
@@ -256,7 +211,7 @@ export default function Scheme() {
             <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
               <button 
                 type="button" 
-                onClick={() => { setView('list'); setFormData({ name: '', startDate: '', endDate: '', description: '' }); }} 
+                onClick={() => { setView('list'); setFormData({ name: '', description: '' }); }} 
                 className="w-full sm:w-auto px-8 py-4 rounded-full text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors"
               >
                 ← Cancel
@@ -265,7 +220,7 @@ export default function Scheme() {
                 type="submit" 
                 className="w-full sm:w-auto px-12 py-4 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-sm font-bold shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:-translate-y-0.5 transition-all"
               >
-                Save Scheme to Registry ✓
+                Save Sector to Registry ✓
               </button>
             </div>
 

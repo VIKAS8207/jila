@@ -31,7 +31,6 @@ export default function DashboardLayout() {
       { name: 'Demand Update', path: '/dashboard/demand-update' },
       { name: 'Documentation', path: '/dashboard/documentation' },
       { name: 'Progress Update', path: '/dashboard/progress' },
-      { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
       { name: 'Valuation', path: '/dashboard/valuation' },
       { name: 'Close Project', path: '/dashboard/close-project' },
       { name: 'Accountant Directory', path: '/dashboard/accountant' },
@@ -41,7 +40,6 @@ export default function DashboardLayout() {
       { name: 'Dashboard', path: '/dashboard' },
       { name: 'Documentation', path: '/dashboard/documentation' },
       { name: 'Progress Update', path: '/dashboard/progress' },
-      { name: 'Fund Allotment', path: '/dashboard/fund-allotment' },
       { name: 'Valuation', path: '/dashboard/valuation' },
       { name: 'Accountant Directory', path: '/dashboard/accountant' },
     ];
@@ -57,6 +55,10 @@ export default function DashboardLayout() {
     { name: 'Scheme', path: '/dashboard/scheme' },
     { name: 'Engineer', path: '/dashboard/engineer' },
     { name: 'Gram Panchayat', path: '/dashboard/gram-panchayat' },
+    { name: 'Work Priorities', path: '/dashboard/work-priorities' },
+    { name: 'Sector', path: '/dashboard/sector' },
+    { name: 'Financial Year', path: '/dashboard/financial-year' },
+    { name: 'Proposal Authority', path: '/dashboard/proposal-authority' },
   ];
 
   const reportLinks = [

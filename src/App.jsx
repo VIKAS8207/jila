@@ -11,12 +11,15 @@ import CloseProject from './pages/CloseProject';
 import DemandUpdate from './pages/DemandUpdate'; 
 import Documentation from './pages/Documentation'; 
 import ProgressUpdate from './pages/ProgressUpdate'; 
-import FundAllotment from './pages/FundAllotment';
 import Scheme from './pages/Scheme';
 import Engineer from './pages/Engineer';
 import Accountant from './pages/Accountant';
 import Valuation from './pages/Valuation';
 import GramPanchayat from './pages/GramPanchayat';
+
+import Sector from './pages/Sector';
+import FinancialYear from './pages/FinancialYear';
+import ProposalAuthority from './pages/ProposalAuthority';
 
 // Generic placeholder
 const PlaceholderPage = ({ title }) => (
@@ -45,7 +48,6 @@ export default function App() {
 
           <Route path="documentation" element={<Documentation />} />
           <Route path="progress" element={<ProgressUpdate />} />
-          <Route path="fund-allotment" element={<FundAllotment />} />
 
           
           {/* Master Configurations */}
@@ -54,6 +56,10 @@ export default function App() {
           <Route path="accountant" element={<Accountant />} />
           <Route path="valuation" element={<Valuation />} />
           <Route path="gram-panchayat" element={<GramPanchayat />} />
+
+          <Route path="sector" element={<Sector />} />
+          <Route path="financial-year" element={<FinancialYear />} />
+          <Route path="proposal-authority" element={<ProposalAuthority />} />
           
           {/* Reports */}
           <Route path="reports/financial" element={<PlaceholderPage title="Financial Summary Report" />} />
