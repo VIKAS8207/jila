@@ -4,7 +4,6 @@ import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Project from './pages/Project'; 
-import CreateProject from './pages/CreateProject';
 import DemandCreation from './pages/DemandCreation'; 
 import CloseProject from './pages/CloseProject';
 // 1. IMPORT THE NEW DEMAND UPDATE PAGE
@@ -22,6 +21,7 @@ import FinancialYear from './pages/FinancialYear';
 import ProposalAuthority from './pages/ProposalAuthority';
 
 import ProjectVerify from './pages/verifypage/ProjectVerify';
+import BankDetails from './pages/BankDetails';
 
 // Generic placeholder
 const PlaceholderPage = ({ title }) => (
@@ -41,7 +41,7 @@ export default function App() {
           {/* Main Features */}
           <Route index element={<Dashboard />} />
           <Route path="project" element={<Project />} />
-          <Route path="project/create" element={<CreateProject />} />
+    
 
           <Route path="demand-creation" element={<DemandCreation />} />
           <Route path="close-project" element={<CloseProject />} />
@@ -64,6 +64,7 @@ export default function App() {
           <Route path="proposal-authority" element={<ProposalAuthority />} />
 
           <Route path="verify-project" element={<ProjectVerify />} />
+          <Route path="bank-details" element={<BankDetails />} />
           
           {/* Reports */}
           <Route path="reports/financial" element={<PlaceholderPage title="Financial Summary Report" />} />

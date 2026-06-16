@@ -33,14 +33,18 @@ export default function DashboardLayout() {
         name: 'Project', 
         path: userRole === ROLES.CEO_JILA_PANCHAYAT ? '/dashboard/verify-project' : '/dashboard/project' 
       },
-      { name: 'Demand Creation', path: '/dashboard/demand-creation' },
-      { name: 'Demand Update', path: '/dashboard/demand-update' },
+      
+      ...(userRole !== ROLES.CEO_JILA_PANCHAYAT ? [{ name: 'Demand Creation', path: '/dashboard/demand-Creation' }] : []),
+      // Conditionally render Demand Update ONLY if the user is NOT Gram Panchayat
+      ...(userRole !== ROLES.GRAM_PANCHAYAT ? [{ name: 'Demand Update', path: '/dashboard/demand-update' }] : []),
+      
       { name: 'Documentation', path: '/dashboard/documentation' },
       { name: 'Progress Update', path: '/dashboard/progress' },
       { name: 'Valuation', path: '/dashboard/valuation' },
       { name: 'Close Project', path: '/dashboard/close-project' },
       { name: 'Accountant Directory', path: '/dashboard/accountant' },
     ];
+  
   } else if (isLimitedAccess) {
     primaryLinks = [
       { name: 'Dashboard', path: '/dashboard' },
@@ -61,7 +65,7 @@ export default function DashboardLayout() {
     { name: 'Scheme', path: '/dashboard/scheme' },
     { name: 'Engineer', path: '/dashboard/engineer' },
     { name: 'Gram Panchayat', path: '/dashboard/gram-panchayat' },
-    { name: 'Work Priorities', path: '/dashboard/work-priorities' },
+    { name: 'Bank Details', path: '/dashboard/bank-details' },
     { name: 'Sector', path: '/dashboard/sector' },
     { name: 'Financial Year', path: '/dashboard/financial-year' },
     { name: 'Proposal Authority', path: '/dashboard/proposal-authority' },

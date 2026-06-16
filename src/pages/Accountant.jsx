@@ -24,7 +24,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, disabled = fals
         }`}
       >
         <span className="truncate">{value || placeholder}</span>
-        <svg className={`w-4 h-4 ml-3 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#451db3]' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className={`w-4 h-4 ml-3 shrink-0 transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-180 text-[#451db3]' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -42,7 +42,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, disabled = fals
               <li 
                 key={idx}
                 onClick={() => { onChange(opt); setIsOpen(false); }}
-                className={`px-4 py-3 my-1 text-sm font-bold rounded-xl cursor-pointer transition-colors ${value === opt ? 'bg-[#451db3] text-white' : 'text-slate-600 hover:bg-[#451db3]/10 hover:text-[#451db3]'}`}
+                className={`px-4 py-3 my-1 text-sm font-bold cursor-pointer transition-colors ${value === opt ? 'bg-[#451db3] text-white' : 'text-slate-600 hover:bg-[#451db3]/10 hover:text-[#451db3]'}`}
               >
                 {opt}
               </li>
@@ -67,7 +67,8 @@ export default function Accountant() {
 
   // --- MOCK DATA: SAVED BANK DETAILS (Auto-fill for 2nd/3rd installments) ---
   const [savedBankDetails, setSavedBankDetails] = useState({
-    'WRK-2026-802': { senderBank: 'SBI Zila Parishad', senderAcc: '30291188321', receiverBank: 'HDFC MediCorp', receiverAcc: '5010029384' }
+    'WRK-2026-802': { senderBank: 'SBI Zila Parishad', senderAcc: '30291188321', receiverBank: 'HDFC MediCorp', receiverAcc: '5010029384' },
+    'WRK-2026-800': { senderBank: 'PNB District Treasury', senderAcc: '0987654321', receiverBank: 'SBI Uslapur Branch', receiverAcc: '1122334455' } // Pre-filled for WRK-2026-800
   });
 
   // States
@@ -114,6 +115,7 @@ export default function Accountant() {
     setActiveDemand(demand);
     
     // Auto-fill logic if bank details for this project exist
+    // This allows the user to see the details and edit them if needed in the form view
     if (savedBankDetails[demand.workId]) {
       setPaymentForm(savedBankDetails[demand.workId]);
     } else {
@@ -132,6 +134,7 @@ export default function Accountant() {
     setDemands(demands.map(d => d.id === activeDemand.id ? { ...d, status: 'Paid' } : d));
     
     // 2. Save/Update the bank details for future installments of this project
+    // This records any edits the user might have made on the form screen
     setSavedBankDetails({
       ...savedBankDetails,
       [activeDemand.workId]: paymentForm
@@ -144,6 +147,10 @@ export default function Accountant() {
   };
 
   const inputClass = "w-full rounded-full border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 transition-all outline-none shadow-[0_2px_10px_rgba(0,0,0,0.03)]";
+
+  // Check for CEO privileges to view transaction history
+  const isCeo = userRole === 'CEO Jila Panchayat' || userRole === 'CO Jila Adhyaksh';
+  const paidDemands = demands.filter(d => d.status === 'Paid');
 
   return (
     <div className="space-y-6 pb-10 relative">
@@ -168,7 +175,7 @@ export default function Accountant() {
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
             </div>
             <h3 className="text-2xl font-black text-slate-800 mb-2 text-center">Confirm Disbursement</h3>
-            <p className="text-sm font-medium text-slate-500 mb-6 text-center">Please verify the routing details before finalizing the transaction.</p>
+            <p className="text-sm font-medium text-slate-500 mb-6 text-center">Please verify the final routing details before executing the transaction.</p>
             
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6 space-y-4">
               <div className="flex justify-between items-center border-b border-slate-200 pb-3">
@@ -214,97 +221,146 @@ export default function Accountant() {
       {/* VIEW: LIST PENDING / PAID DEMANDS */}
       {/* ======================================================= */}
       {view === 'list' && (
-        <>
-          <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative">
-            <div className="flex-1 w-full relative">
-              <input 
-                type="text" 
-                placeholder="Search by Work ID or Project Name..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-full border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 outline-none shadow-sm transition-all" 
-              />
+        <div className="space-y-8">
+          
+          {/* Main Action Table Area */}
+          <div>
+            <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative mb-6">
+              <div className="flex-1 w-full relative">
+                <input 
+                  type="text" 
+                  placeholder="Search by Work ID or Project Name..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-full border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 outline-none shadow-sm transition-all" 
+                />
+              </div>
+              <div className="w-full md:w-64 shrink-0">
+                <CustomDropdown 
+                  placeholder="All Statuses"
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={['Pending', 'Paid']}
+                />
+              </div>
             </div>
-            <div className="w-full md:w-64 shrink-0">
-              <CustomDropdown 
-                placeholder="All Statuses"
-                value={statusFilter}
-                onChange={setStatusFilter}
-                options={['Pending', 'Paid']}
-              />
-            </div>
-          </div>
 
-          <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-in fade-in z-10 relative">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left border-collapse whitespace-nowrap">
-                <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
-                  <tr>
-                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">S.No</th>
-                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Project Details</th>
-                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Approved By</th>
-                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Destination</th>
-                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Installment</th>
-                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-right">Amount</th>
-                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {currentData.length === 0 ? (
-                    <tr><td colSpan="7" className="px-8 py-12 text-center text-slate-500 font-bold">No demands match your filters.</td></tr>
-                  ) : (
-                    currentData.map((demand, index) => (
-                      <tr key={demand.id} className="hover:bg-[#451db3]/5 transition-colors group text-sm">
-                        <td className="px-5 py-5 font-bold text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                        <td className="px-5 py-5">
-                          <p className="font-bold text-slate-900">{demand.workName}</p>
-                          <p className="text-[11px] font-mono font-bold text-[#451db3] mt-1">{demand.workId}</p>
-                        </td>
-                        <td className="px-5 py-5 font-bold text-slate-600">{demand.approvedBy}</td>
-                        <td className="px-5 py-5 font-bold text-slate-700">{demand.destination}</td>
-                        <td className="px-5 py-5">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                            {demand.installment}
-                          </span>
-                        </td>
-                        <td className="px-5 py-5 font-black text-slate-900 text-right">{formatCurrency(demand.amount)}</td>
-                        <td className="px-5 py-5 text-center">
-                          {demand.status === 'Pending' ? (
-                            <button 
-                              onClick={() => handleInitiatePayment(demand)}
-                              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-[11px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all shadow-[0_4px_10px_rgba(69,29,179,0.2)]"
-                            >
-                              Process Payment
-                            </button>
-                          ) : (
-                            <span className="inline-flex items-center px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-600 border border-green-200">
-                              Paid ✓
+            <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-in fade-in z-10 relative">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left border-collapse whitespace-nowrap">
+                  <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
+                    <tr>
+                      <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">S.No</th>
+                      <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Project Details</th>
+                      <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Approved By</th>
+                      <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Destination</th>
+                      <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Installment</th>
+                      <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-right">Amount</th>
+                      <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {currentData.length === 0 ? (
+                      <tr><td colSpan="7" className="px-8 py-12 text-center text-slate-500 font-bold">No demands match your filters.</td></tr>
+                    ) : (
+                      currentData.map((demand, index) => (
+                        <tr key={demand.id} className="hover:bg-[#451db3]/5 transition-colors group text-sm">
+                          <td className="px-5 py-5 font-bold text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                          <td className="px-5 py-5">
+                            <p className="font-bold text-slate-900">{demand.workName}</p>
+                            <p className="text-[11px] font-mono font-bold text-[#451db3] mt-1">{demand.workId}</p>
+                          </td>
+                          <td className="px-5 py-5 font-bold text-slate-600">{demand.approvedBy}</td>
+                          <td className="px-5 py-5 font-bold text-slate-700">{demand.destination}</td>
+                          <td className="px-5 py-5">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                              {demand.installment}
                             </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="px-5 py-5 font-black text-slate-900 text-right">{formatCurrency(demand.amount)}</td>
+                          <td className="px-5 py-5 text-center">
+                            {demand.status === 'Pending' ? (
+                              <button 
+                                onClick={() => handleInitiatePayment(demand)}
+                                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-[11px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all shadow-[0_4px_10px_rgba(69,29,179,0.2)]"
+                              >
+                                Process Payment
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-600 border border-green-200">
+                                Paid ✓
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-            <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredDemands.length)}</span> of <span className="text-[#451db3]">{filteredDemands.length}</span>
-              </p>
-              <div className="flex items-center gap-3">
-                <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Prev</button>
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#451db3]/10 text-[#451db3] font-black text-xs">{currentPage}</div>
-                <button onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Next</button>
+              <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredDemands.length)}</span> of <span className="text-[#451db3]">{filteredDemands.length}</span>
+                </p>
+                <div className="flex items-center gap-3">
+                  <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Prev</button>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#451db3]/10 text-[#451db3] font-black text-xs">{currentPage}</div>
+                  <button onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-[#451db3] hover:text-white disabled:opacity-50 transition-all shadow-sm">Next</button>
+                </div>
               </div>
             </div>
           </div>
-        </>
+
+          {/* Conditional CEO Transaction History Table */}
+          {isCeo && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pt-6">
+              <div className="mb-4">
+                <h3 className="text-xl font-black text-slate-800 tracking-wide">Successful Transaction History</h3>
+                <p className="text-sm font-medium text-slate-500 mt-1">Audit log of all completed disbursements (CEO Access Only).</p>
+              </div>
+              
+              <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col overflow-hidden border border-slate-100">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left border-collapse whitespace-nowrap">
+                    <thead className="bg-green-50/50 border-b border-green-100">
+                      <tr>
+                        <th className="px-6 py-4 text-[10px] font-black text-green-700 uppercase tracking-widest">Transaction Ref</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-green-700 uppercase tracking-widest">Project Name</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-green-700 uppercase tracking-widest">Destination</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-green-700 uppercase tracking-widest">Installment</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-green-700 uppercase tracking-widest text-right">Amount Paid</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {paidDemands.length === 0 ? (
+                        <tr><td colSpan="5" className="px-8 py-8 text-center text-slate-500 font-bold">No completed transactions found.</td></tr>
+                      ) : (
+                        paidDemands.map((demand, index) => (
+                          <tr key={index} className="hover:bg-slate-50 transition-colors text-sm">
+                            <td className="px-6 py-4 font-mono font-bold text-slate-500">TRX-{demand.id}9X0{demand.workId.slice(-3)}</td>
+                            <td className="px-6 py-4 font-bold text-slate-800">{demand.workName}</td>
+                            <td className="px-6 py-4 font-medium text-slate-600">{demand.destination}</td>
+                            <td className="px-6 py-4">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                {demand.installment}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 font-black text-green-600 text-right">{formatCurrency(demand.amount)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ======================================================= */}
-      {/* VIEW: PAYMENT FORM */}
+      {/* VIEW: EDITABLE PAYMENT FORM */}
       {/* ======================================================= */}
       {view === 'paymentForm' && activeDemand && (
         <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-10 animate-in slide-in-from-right-8 duration-500 overflow-visible flex flex-col gap-10">
@@ -322,16 +378,17 @@ export default function Accountant() {
             </div>
           </div>
 
-          {/* Bottom Panel: Banking Details Form */}
+          {/* Bottom Panel: Editable Banking Details Form */}
           <div className="flex flex-col justify-start">
-            <div className="mb-8 px-2 flex justify-between items-center">
+            <div className="mb-8 px-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h3 className="text-2xl font-black text-slate-800">Banking & Routing Details</h3>
               {savedBankDetails[activeDemand.workId] && (
-                <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full">
+                <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full whitespace-nowrap">
                   Auto-filled from previous installment ✓
                 </span>
               )}
             </div>
+            <p className="text-sm text-slate-500 font-bold mb-6 px-2">Verify and edit the bank details below if the destination account has changed.</p>
             
             <form onSubmit={handleReviewPayment} className="space-y-8">
               
@@ -389,10 +446,10 @@ export default function Accountant() {
 
               {/* Submit Button */}
               <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
-                <p className="text-xs font-bold text-slate-400 max-w-sm">Please verify account numbers carefully. Disbursals cannot be reversed automatically.</p>
+                <p className="text-xs font-bold text-slate-400 max-w-sm hidden md:block">Please verify account numbers carefully. Disbursals cannot be reversed automatically.</p>
                 <button 
                   type="submit" 
-                  className="px-12 py-4 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-sm font-bold shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:-translate-y-0.5 transition-all"
+                  className="w-full md:w-auto px-12 py-4 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-sm font-bold shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:-translate-y-0.5 transition-all"
                 >
                   Review Details & Proceed
                 </button>

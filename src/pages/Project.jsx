@@ -72,9 +72,9 @@ const FileInput = ({ label, onChange, disabled, required, accept = "*", placehol
 
 // --- REUSABLE DETAIL POINT ---
 const DetailItem = ({ label, value, highlight = false }) => (
-  <div className="space-y-1">
+  <div className="space-y-1 bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-    <p className={`text-sm ${highlight ? 'font-black text-[#451db3]' : 'font-bold text-slate-800'}`}>
+    <p className={`text-sm ${highlight ? 'font-black text-[#451db3] font-mono tracking-wider' : 'font-bold text-slate-800'}`}>
       {value || <span className="text-slate-300 font-normal italic">Not specified</span>}
     </p>
   </div>
@@ -85,23 +85,71 @@ const DocStatus = ({ label, available }) => (
   <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
     <span className="text-xs font-bold text-slate-700">{label}</span>
     {available ? (
-      <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Available</span>
+      <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Available ✓</span>
     ) : (
-      <span className="bg-red-50 text-red-500 border border-red-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Missing</span>
+      <span className="bg-red-50 text-red-500 border border-red-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Missing ✕</span>
     )}
   </div>
 );
 
+// --- ACTION MENU COMPONENT (THREE DOTS) ---
+const ActionMenu = ({ onView, onDelete }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-left" ref={menuRef}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)} 
+        className="p-2 text-slate-400 hover:text-[#451db3] hover:bg-[#451db3]/10 rounded-full transition-colors focus:outline-none"
+      >
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 12c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+        </svg>
+      </button>
+      
+      {isOpen && (
+        <div className="absolute right-8 top-0 mt-0 w-36 bg-white rounded-xl shadow-[0_10px_40px_rgba(69,29,179,0.15)] border border-slate-100 overflow-hidden z-[999] animate-in fade-in zoom-in-95">
+          <button 
+            onClick={() => { setIsOpen(false); onView(); }} 
+            className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-[#451db3]/10 hover:text-[#451db3] transition-colors flex items-center gap-2"
+          >
+            <span>👁️</span> View Details
+          </button>
+          <button 
+            onClick={() => { setIsOpen(false); onDelete(); }} 
+            className="w-full text-left px-4 py-3 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 border-t border-slate-100"
+          >
+            <span>🗑️</span> Delete Project
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- MAIN PROJECT COMPONENT ---
 export default function Project() {
   const navigate = useNavigate(); 
   const { userRole } = useOutletContext(); 
 
   // View States
   const [view, setView] = useState('list'); // 'list' | 'form' | 'details'
-  const [activeProject, setActiveProject] = useState(null);
+  const [activeProject, setActiveProject] = useState(null); 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterFinYear, setFilterFinYear] = useState('');
   const [filterSector, setFilterSector] = useState('');
@@ -112,20 +160,21 @@ export default function Project() {
 
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
 
-  // Form State
+  // Form State (All fields included)
   const [formData, setFormData] = useState({
     district: 'Bilaspur', workName: '', sector: '', subSector: '', relatedDepartment: '', proposedBy: '', financialYear: '', 
     executingDepartment: '', executingAgency: '', estimatedAmount: '', workPriority: '', remarks: '',
-    proposalLetterNo: '', proposalDate: '', duration: '',
+    proposalLetterNo: '', proposalDate: '', duration: '', hasTS: 'Yes',
     docs: { ts: false, as: false, uc: false, cc: false, geo: false, layout: false, map: false, khasra: false, gpProposal: false, sitePlan: false, additional: false, proposalLetter: false, finalProposal: false }
   });
   const [geoTagData, setGeoTagData] = useState(null);
 
-  // Expanded Mock Data to support all view fields
+  // Mock Data
   const [projects, setProjects] = useState([
     { id: 1, workId: 'WRK-2026-834', workName: 'Sample Community Hall', district: 'Bilaspur', sector: 'Welfare', subSector: 'Community Dev', relatedDepartment: 'Janpad', proposedBy: 'Sarpanch', financialYear: '2025-2026', estimatedAmount: 1500000, executingDepartment: 'RES', executingAgency: 'BuildTech Corp', workPriority: 'High', remarks: 'Needs immediate attention before monsoon.', proposalLetterNo: 'PR-2025-001', proposalDate: '2025-01-15', duration: '120', docs: { ts: true, as: true, uc: false, cc: false, geo: true, proposalLetter: true, map: true } },
     { id: 2, workId: 'WRK-2026-835', workName: 'Primary School Renovation', district: 'Bilaspur', sector: 'Education', subSector: 'Maintenance', relatedDepartment: 'CEO Jila Panchayat', proposedBy: 'MLA', financialYear: '2025-2026', estimatedAmount: 800000, executingDepartment: 'PWD', executingAgency: 'EduBuild Pvt', workPriority: 'Medium', remarks: '', proposalLetterNo: 'PR-2025-089', proposalDate: '2025-02-10', duration: '90', docs: { ts: true, as: true, uc: true, cc: false, geo: true, proposalLetter: true, map: false } },
-    { id: 3, workId: 'WRK-2026-836', workName: 'Village Water Tank', district: 'Bilaspur', sector: 'Infrastructure', subSector: 'Water Supply', relatedDepartment: 'Gram Panchayat', proposedBy: 'Gram Panchayat', financialYear: '2026-2027', estimatedAmount: 2200000, executingDepartment: 'PHE', executingAgency: 'AquaFlow Ind', workPriority: 'High', remarks: 'Critical water shortage area.', proposalLetterNo: 'PR-2026-003', proposalDate: '2026-04-05', duration: '180', docs: { ts: false, as: false, uc: false, cc: false, geo: false, proposalLetter: true, map: true } }
+    { id: 3, workId: 'WRK-2026-836', workName: 'Village Water Tank', district: 'Bilaspur', sector: 'Infrastructure', subSector: 'Water Supply', relatedDepartment: 'Gram Panchayat', proposedBy: 'Gram Panchayat', financialYear: '2026-2027', estimatedAmount: 2200000, executingDepartment: 'PHE', executingAgency: 'AquaFlow Ind', workPriority: 'High', remarks: 'Critical water shortage area.', proposalLetterNo: 'PR-2026-003', proposalDate: '2026-04-05', duration: '180', docs: { ts: false, as: false, uc: false, cc: false, geo: false, proposalLetter: true, map: true } },
+    { id: 4, workId: 'WRK-2026-837', workName: 'Rural Dispensary', district: 'Bilaspur', sector: 'Health', subSector: 'Hospital Constr.', relatedDepartment: 'Janpad', proposedBy: 'BDO', financialYear: '2025-2026', estimatedAmount: 3500000, executingDepartment: 'CGMSC', executingAgency: 'MediCorp Builders', workPriority: 'High', remarks: 'Requires fast-track execution.', proposalLetterNo: 'PR-2026-044', proposalDate: '2026-02-10', duration: '240', docs: { ts: true, as: true, uc: false, cc: false, geo: true, proposalLetter: true, map: false } },
   ]);
 
   const showToast = (msg, type = 'success') => {
@@ -133,15 +182,21 @@ export default function Project() {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   };
 
-  // Reset pagination to page 1 whenever a filter changes
-  useEffect(() => { setCurrentPage(1); }, [filterDepartment, filterFinYear, filterSector]);
+// 1. Filter Logic
+  // ---> ADDED searchQuery to the array below
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, filterDepartment, filterFinYear, filterSector]); 
 
-  // 1. Filter Logic
   const filteredProjects = projects.filter(proj => {
+    // ---> ADDED SEARCH MATCHING LOGIC
+    const searchLower = searchQuery.toLowerCase();
+    const matchSearch = proj.workName.toLowerCase().includes(searchLower) || proj.workId.toLowerCase().includes(searchLower);
+    
     const matchDepartment = filterDepartment === '' || proj.relatedDepartment === filterDepartment;
     const matchFinYear = filterFinYear === '' || proj.financialYear === filterFinYear;
     const matchSector = filterSector === '' || proj.sector === filterSector;
-    return matchDepartment && matchFinYear && matchSector;
+    
+    // ---> RETURN ALL CONDITIONS
+    return matchSearch && matchDepartment && matchFinYear && matchSector;
   });
 
   // 2. Pagination Logic
@@ -151,13 +206,21 @@ export default function Project() {
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
 
-  // Dropdown Options
+  // 3. Dropdown Options
   const uniqueFinYears = [...new Set(projects.map(p => p.financialYear))];
   const uniqueSectors = [...new Set(projects.map(p => p.sector))];
   const uniqueDepartments = [...new Set(projects.map(p => p.relatedDepartment))];
   const proposalAuthorities = ['CEO Jila Panchayat', 'BDO', 'Sarpanch', 'MLA', 'MP', 'Gram Panchayat', 'Janpad'];
 
   // --- HANDLERS ---
+  const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
+
+  const handleDocUpload = (docKey, file) => {
+    if (file) {
+      setFormData(prev => ({ ...prev, docs: { ...prev.docs, [docKey]: true } }));
+    }
+  };
+
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -167,49 +230,60 @@ export default function Project() {
     }
   };
 
-  const handleDocUpload = (docKey, file) => {
-    if (file) {
-      setFormData(prev => ({ ...prev, docs: { ...prev.docs, [docKey]: true } }));
-    }
-  };
-
   const handleViewDetails = (project) => {
     setActiveProject(project);
     setView('details');
   };
+
+  const handleDeleteProject = (id) => {
+    if (window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+      setProjects(projects.filter(p => p.id !== id));
+      showToast('Project deleted successfully.', 'error');
+    }
+  };
+
+  // Form Navigation
+  const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, 4));
+  const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();
     if (!formData.proposedBy) { alert("Please select who proposed this project."); return; }
     if (!formData.docs.geo) { alert("Base Geo-Tag Photo is strictly required to establish the project geofence."); return; }
     
-    const newProject = {
-      id: Date.now(),
-      workId: `WRK-2026-${Math.floor(Math.random() * 900) + 100}`,
-      workName: formData.workName,
-      district: formData.district,
-      sector: formData.sector,
-      subSector: formData.subSector,
-      relatedDepartment: formData.relatedDepartment,
-      proposedBy: formData.proposedBy,
-      financialYear: formData.financialYear,
-      estimatedAmount: parseFloat(formData.estimatedAmount),
-      executingDepartment: formData.executingDepartment,
-      executingAgency: formData.executingAgency,
-      workPriority: formData.workPriority,
-      remarks: formData.remarks,
-      proposalLetterNo: formData.proposalLetterNo,
-      proposalDate: formData.proposalDate,
-      duration: formData.duration,
-      docs: formData.docs
-    };
+    setIsSubmitting(true);
 
-    setProjects([newProject, ...projects]);
-    setView('list');
-    setFormData({ district: 'Bilaspur', workName: '', sector: '', subSector: '', relatedDepartment: '', proposedBy: '', financialYear: '', executingDepartment: '', executingAgency: '', estimatedAmount: '', workPriority: '', remarks: '', proposalLetterNo: '', proposalDate: '', duration: '', docs: { ts: false, as: false, uc: false, cc: false, geo: false, layout: false, map: false, khasra: false, gpProposal: false, sitePlan: false, additional: false, proposalLetter: false, finalProposal: false } });
-    setGeoTagData(null);
-    setCurrentPage(1);
-    showToast('New Project successfully registered and geofenced ✓');
+    setTimeout(() => {
+      const newProject = {
+        id: Date.now(),
+        workId: `WRK-2026-${Math.floor(Math.random() * 900) + 100}`,
+        workName: formData.workName,
+        district: formData.district,
+        sector: formData.sector,
+        subSector: formData.subSector,
+        relatedDepartment: formData.relatedDepartment,
+        proposedBy: formData.proposedBy,
+        financialYear: formData.financialYear,
+        estimatedAmount: parseFloat(formData.estimatedAmount),
+        executingDepartment: formData.executingDepartment,
+        executingAgency: formData.executingAgency,
+        workPriority: formData.workPriority,
+        remarks: formData.remarks,
+        proposalLetterNo: formData.proposalLetterNo,
+        proposalDate: formData.proposalDate,
+        duration: formData.duration,
+        docs: formData.docs
+      };
+
+      setProjects([newProject, ...projects]);
+      setIsSubmitting(false);
+      setView('list');
+      setCurrentStep(1);
+      setFormData({ district: 'Bilaspur', workName: '', sector: '', subSector: '', relatedDepartment: '', proposedBy: '', financialYear: '', executingDepartment: '', executingAgency: '', estimatedAmount: '', workPriority: '', remarks: '', proposalLetterNo: '', proposalDate: '', duration: '', hasTS: 'Yes', docs: { ts: false, as: false, uc: false, cc: false, geo: false, layout: false, map: false, khasra: false, gpProposal: false, sitePlan: false, additional: false, proposalLetter: false, finalProposal: false } });
+      setGeoTagData(null);
+      setCurrentPage(1);
+      showToast('New Project successfully registered and geofenced ✓');
+    }, 1000);
   };
 
   const inputClass = "w-full rounded-full border border-slate-200 bg-white/50 px-5 py-3.5 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-[#451db3] focus:ring-2 focus:ring-[#451db3]/20 transition-all outline-none shadow-[0_2px_10px_rgba(0,0,0,0.03)]";
@@ -236,23 +310,23 @@ export default function Project() {
           </h2>
           <p className="text-sm font-medium text-slate-500 mt-1">
             {view === 'list' && 'View, filter, and initiate all active projects across departments.'}
-            {view === 'form' && 'Enter master details to register a new project into the system.'}
+            {view === 'form' && 'Complete the 4-step process to register and geofence a new project.'}
             {view === 'details' && `Comprehensive view for ${activeProject?.workId}`}
           </p>
         </div>
         {view === 'list' ? (
           <button 
-            onClick={() => setView('form')} 
+            onClick={() => { setView('form'); setCurrentStep(1); }} 
             className="bg-gradient-to-r from-[#451db3] to-[#5b2bd9] hover:from-[#3a1796] hover:to-[#451db3] text-white px-8 py-3.5 rounded-full text-sm font-bold transition-all transform hover:scale-[1.02] shadow-[0_8px_20px_rgba(69,29,179,0.25)] shrink-0"
           >
             + New Project
           </button>
         ) : (
           <button 
-            onClick={() => setView('list')} 
+            onClick={() => { setView('list'); setCurrentStep(1); }} 
             className="text-sm font-bold text-slate-400 hover:text-[#451db3] transition-colors"
           >
-            ← Back to List
+            Cancel ✕
           </button>
         )}
       </div>
@@ -262,16 +336,31 @@ export default function Project() {
       {/* ======================================================= */}
       {view === 'list' && (
         <>
+          {/* Filter Bar */}
           <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative">
-            <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0 ml-2">Filters</span>
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+            <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0 ml-2">Search & Filters</span>
+            
+            {/* ---> CHANGED grid to lg:grid-cols-4 */}
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+              
+              {/* ---> ADDED SEARCH INPUT HERE */}
+              <input 
+                type="text" 
+                placeholder="Search Work ID or Name..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={inputClass} 
+              />
+
               <CustomDropdown placeholder="All Departments" value={filterDepartment} onChange={setFilterDepartment} options={uniqueDepartments} />
               <CustomDropdown placeholder="All Financial Years" value={filterFinYear} onChange={setFilterFinYear} options={uniqueFinYears} />
               <CustomDropdown placeholder="All Sectors" value={filterSector} onChange={setFilterSector} options={uniqueSectors} />
             </div>
-            {(filterDepartment || filterFinYear || filterSector) && (
+            
+            {/* ---> UPDATED CLEAR BUTTON TO INCLUDE searchQuery */}
+            {(searchQuery || filterDepartment || filterFinYear || filterSector) && (
               <button 
-                onClick={() => { setFilterDepartment(''); setFilterFinYear(''); setFilterSector(''); }}
+                onClick={() => { setSearchQuery(''); setFilterDepartment(''); setFilterFinYear(''); setFilterSector(''); }}
                 className="text-xs font-bold text-red-500 hover:text-white hover:bg-red-500 px-5 py-3.5 rounded-full transition-all shrink-0 bg-red-50 shadow-sm"
               >
                 Clear
@@ -280,47 +369,50 @@ export default function Project() {
           </div>
 
           <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden z-10 relative">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto pb-24 -mb-24">
               <table className="min-w-full text-left border-collapse whitespace-nowrap">
                 <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
                   <tr>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">S.No</th>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work ID</th>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work Name</th>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Sector / Sub</th>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Related Dept</th>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Fin. Year</th>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Est. Amount</th>
-                    <th className="px-5 py-4 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">S.No</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work ID</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work Name</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Sector</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Sub Sector</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Related Dept</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Est. Cost (₹)</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Source of Proposal</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Fin. Year</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Exec. Dept</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Exec. Agency</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {currentData.length === 0 ? (
-                    <tr><td colSpan="8" className="px-8 py-12 text-center text-slate-500 font-bold">No projects match the selected filters.</td></tr>
+                    <tr><td colSpan="12" className="px-8 py-12 text-center text-slate-500 font-bold">No projects match the selected filters.</td></tr>
                   ) : (
                     currentData.map((proj, index) => (
                       <tr key={proj.id} className="hover:bg-[#451db3]/5 transition-colors group text-sm">
-                        <td className="px-5 py-4 font-bold text-slate-500 align-middle">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                        <td className="px-5 py-4 font-mono font-bold text-slate-700 align-middle">{proj.workId}</td>
-                        <td className="px-5 py-4 font-bold text-slate-900 align-middle">{proj.workName}</td>
-                        <td className="px-5 py-4 align-middle">
-                          <p className="font-bold text-slate-700">{proj.sector}</p>
-                          <p className="text-[10px] font-medium text-slate-500 uppercase">{proj.subSector}</p>
-                        </td>
-                        <td className="px-5 py-4 align-middle">
+                        <td className="px-5 py-5 font-bold text-slate-500 align-middle">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                        <td className="px-5 py-5 font-mono font-bold text-slate-700 align-middle">{proj.workId}</td>
+                        <td className="px-5 py-5 font-bold text-slate-900 align-middle">{proj.workName}</td>
+                        <td className="px-5 py-5 font-medium text-slate-600 align-middle">{proj.sector}</td>
+                        <td className="px-5 py-5 font-medium text-slate-600 align-middle">{proj.subSector}</td>
+                        <td className="px-5 py-5 align-middle">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-slate-600 border border-slate-200 group-hover:border-[#451db3]/30 group-hover:text-[#451db3] transition-colors">
                             {proj.relatedDepartment}
                           </span>
                         </td>
-                        <td className="px-5 py-4 font-bold text-slate-700 align-middle">{proj.financialYear}</td>
-                        <td className="px-5 py-4 font-black text-[#451db3] align-middle">{formatCurrency(proj.estimatedAmount)}</td>
-                        <td className="px-5 py-4 text-center align-middle">
-                          <button 
-                            onClick={() => handleViewDetails(proj)}
-                            className="bg-white border border-slate-200 text-slate-600 hover:text-white hover:bg-[#451db3] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
-                          >
-                            View Details
-                          </button>
+                        <td className="px-5 py-5 font-black text-[#451db3] align-middle">{formatCurrency(proj.estimatedAmount)}</td>
+                        <td className="px-5 py-5 font-bold text-slate-700 align-middle">{proj.proposedBy}</td>
+                        <td className="px-5 py-5 font-bold text-slate-700 align-middle">{proj.financialYear}</td>
+                        <td className="px-5 py-5 font-medium text-slate-600 align-middle">{proj.executingDepartment}</td>
+                        <td className="px-5 py-5 font-medium text-slate-600 align-middle">{proj.executingAgency}</td>
+                        <td className="px-5 py-5 text-center align-middle relative">
+                          <ActionMenu 
+                            onView={() => handleViewDetails(proj)} 
+                            onDelete={() => handleDeleteProject(proj.id)} 
+                          />
                         </td>
                       </tr>
                     ))
@@ -329,7 +421,7 @@ export default function Project() {
               </table>
             </div>
 
-            <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 flex items-center justify-between">
+            <div className="bg-slate-50/50 border-t border-slate-100 px-8 py-5 mt-24 flex items-center justify-between">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                 Showing <span className="text-[#451db3]">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-[#451db3]">{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</span> of <span className="text-[#451db3]">{filteredProjects.length}</span>
               </p>
@@ -436,154 +528,227 @@ export default function Project() {
       )}
 
       {/* ======================================================= */}
-      {/* VIEW: CREATE NEW PROJECT FORM */}
+      {/* VIEW: 4-STEP WIZARD CREATION FORM */}
       {/* ======================================================= */}
       {view === 'form' && (
         <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 sm:p-12 animate-in slide-in-from-right-8 duration-500 w-full">
+          
           <div className="mb-8 border-b border-slate-100 pb-6">
             <h3 className="text-2xl font-black text-slate-800">Initiate New Project</h3>
-            <p className="text-sm font-medium text-slate-500 mt-2">Enter all master details, documents, and geofence data to register a new project.</p>
+            <p className="text-sm font-medium text-slate-500 mt-2">Complete the 4-step authorization process to register a new work scheme.</p>
+          </div>
+
+          {/* Modern Progress Indicator - 4 Steps */}
+          <div className="flex justify-center mb-10">
+            <div className="flex items-center w-full max-w-4xl">
+              {[1, 2, 3, 4].map((step, index) => (
+                <React.Fragment key={step}>
+                  <div className="flex flex-col items-center relative z-10">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-500 ${
+                      currentStep === step ? 'bg-[#451db3] text-white shadow-[0_0_15px_rgba(69,29,179,0.3)] scale-110' :
+                      currentStep > step ? 'bg-[#451db3]/20 text-[#451db3]' : 'bg-slate-100 text-slate-400'
+                    }`}>
+                      {currentStep > step ? '✓' : step}
+                    </div>
+                    <span className={`absolute top-12 text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${currentStep >= step ? 'text-[#451db3]' : 'text-slate-400'}`}>
+                      {step === 1 ? 'General' : step === 2 ? 'Execution' : step === 3 ? 'Docs' : 'Geofence'}
+                    </span>
+                  </div>
+                  {index < 3 && (
+                    <div className={`flex-1 h-1 mx-2 rounded-full transition-all duration-500 ${currentStep > step ? 'bg-[#451db3]/30' : 'bg-slate-100'}`}></div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
 
           <form onSubmit={handleCreateSubmit} className="space-y-10">
-            {/* --- SECTION 1: General Details --- */}
-            <div>
-              <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">1. General Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-1.5 lg:col-span-2">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Work / Project Name <span className="text-red-500">*</span></label>
-                  <input type="text" required value={formData.workName} onChange={e => setFormData({...formData, workName: e.target.value})} placeholder="e.g. Primary School Renovation" className={inputClass} />
-                </div>
-                <div className="space-y-1.5 relative z-[60]">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposed By <span className="text-red-500">*</span></label>
-                  <CustomDropdown placeholder="Select Authority" value={formData.proposedBy} onChange={(val) => setFormData({...formData, proposedBy: val})} options={proposalAuthorities} />
-                </div>
-                
-                <div className="space-y-1.5 relative z-50">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Work Priority <span className="text-red-500">*</span></label>
-                  <CustomDropdown placeholder="Select Priority" value={formData.workPriority} onChange={v => handleInputChange('workPriority', v)} options={['High (Immediate)', 'Medium', 'Low (Routine)']} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Estimated Amount (₹) <span className="text-red-500">*</span></label>
-                  <input type="number" required placeholder="Total estimated cost" value={formData.estimatedAmount} onChange={e => handleInputChange('estimatedAmount', e.target.value)} className={inputClass} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">District</label>
-                  <input type="text" disabled value={formData.district} className={`${inputClass} opacity-60 cursor-not-allowed`} />
-                </div>
 
-                <div className="space-y-1.5 relative z-40">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sector</label>
-                  <CustomDropdown placeholder="Select Sector" value={formData.sector} onChange={v => handleInputChange('sector', v)} options={['Health', 'Infrastructure', 'Education', 'Welfare']} />
-                </div>
-                <div className="space-y-1.5 relative z-30">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sub Sector</label>
-                  <CustomDropdown placeholder="Select Sub Sector" value={formData.subSector} onChange={v => handleInputChange('subSector', v)} options={['Creation of Hospital', 'Creation of Park', 'Making of School', 'Road Development']} />
-                </div>
-                <div className="space-y-1.5 relative z-20">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Related Department</label>
-                  <CustomDropdown placeholder="Select Department" value={formData.relatedDepartment} onChange={v => handleInputChange('relatedDepartment', v)} options={['CEO Jila Panchayat', 'Janpad', 'Gram Panchayat', 'PWD']} />
-                </div>
+            {/* --- STEP 1: GENERAL INFORMATION --- */}
+            {currentStep === 1 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
+                <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">1. General Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-1.5 lg:col-span-2">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Work / Project Name <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.workName} onChange={e => handleInputChange('workName', e.target.value)} placeholder="e.g. Primary School Renovation" className={inputClass} />
+                  </div>
+                  <div className="space-y-1.5 relative z-[60]">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposed By <span className="text-red-500">*</span></label>
+                    <CustomDropdown placeholder="Select Authority" value={formData.proposedBy} onChange={(val) => handleInputChange('proposedBy', val)} options={proposalAuthorities} />
+                  </div>
+                  
+                  <div className="space-y-1.5 relative z-50">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Work Priority <span className="text-red-500">*</span></label>
+                    <CustomDropdown placeholder="Select Priority" value={formData.workPriority} onChange={v => handleInputChange('workPriority', v)} options={['High (Immediate)', 'Medium', 'Low (Routine)']} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Estimated Amount (₹) <span className="text-red-500">*</span></label>
+                    <input type="number" required placeholder="Total estimated cost" value={formData.estimatedAmount} onChange={e => handleInputChange('estimatedAmount', e.target.value)} className={inputClass} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">District (Auto)</label>
+                    <input type="text" disabled value={formData.district} className={`${inputClass} opacity-60 cursor-not-allowed`} />
+                  </div>
 
-                <div className="space-y-1.5 relative z-10">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Financial Year</label>
-                  <CustomDropdown placeholder="Select Year" value={formData.financialYear} onChange={v => handleInputChange('financialYear', v)} options={['2025-2026', '2026-2027']} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposal Date</label>
-                  <input type="date" value={formData.proposalDate} onChange={e => handleInputChange('proposalDate', e.target.value)} className={inputClass} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposal Letter No.</label>
-                  <input type="text" placeholder="e.g. PR-2026-X" value={formData.proposalLetterNo} onChange={e => handleInputChange('proposalLetterNo', e.target.value)} className={inputClass} />
-                </div>
-              </div>
+                  <div className="space-y-1.5 relative z-40">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sector</label>
+                    <CustomDropdown placeholder="Select Sector" value={formData.sector} onChange={v => handleInputChange('sector', v)} options={uniqueSectors} />
+                  </div>
+                  <div className="space-y-1.5 relative z-30">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Sub Sector</label>
+                    <CustomDropdown placeholder="Select Sub Sector" value={formData.subSector} onChange={v => handleInputChange('subSector', v)} options={['Creation of Hospital', 'Creation of Park', 'Making of School', 'Road Development']} />
+                  </div>
+                  <div className="space-y-1.5 relative z-20">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Related Department</label>
+                    <CustomDropdown placeholder="Select Department" value={formData.relatedDepartment} onChange={v => handleInputChange('relatedDepartment', v)} options={uniqueDepartments} />
+                  </div>
 
-              <div className="space-y-1.5 mt-6">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Objective / Remarks</label>
-                <textarea rows="3" placeholder="Brief description of the work objective..." value={formData.remarks} onChange={e => handleInputChange('remarks', e.target.value)} className={`${inputClass} rounded-2xl resize-none py-4`}></textarea>
-              </div>
-            </div>
-
-            {/* --- SECTION 2: Execution Details --- */}
-            <div>
-              <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">2. Execution Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Executing Department</label>
-                  <input type="text" required value={formData.executingDepartment} onChange={e => handleInputChange('executingDepartment', e.target.value)} placeholder="e.g. PWD" className={inputClass} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Executing Agency</label>
-                  <input type="text" required value={formData.executingAgency} onChange={e => handleInputChange('executingAgency', e.target.value)} placeholder="e.g. EduBuild Pvt" className={inputClass} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Duration (Days)</label>
-                  <input type="number" min="1" value={formData.duration} onChange={e => handleInputChange('duration', e.target.value)} placeholder="e.g. 180" className={inputClass} />
-                </div>
-              </div>
-            </div>
-
-            {/* --- SECTION 3: Documentation --- */}
-            <div>
-              <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">3. Documentation Setup</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FileInput label="Proposal Letter" accept=".pdf" onChange={e => handleDocUpload('proposalLetter', e.target.files[0])} />
-                <FileInput label="Technical Sanction (TS)" accept=".pdf" onChange={e => handleDocUpload('ts', e.target.files[0])} />
-                <FileInput label="Administrative Sanction (AS)" accept=".pdf" onChange={e => handleDocUpload('as', e.target.files[0])} />
-                <FileInput label="Utility Certificate (UC)" accept=".pdf" onChange={e => handleDocUpload('uc', e.target.files[0])} />
-                <FileInput label="Completion Certificate (CC)" accept=".pdf" onChange={e => handleDocUpload('cc', e.target.files[0])} />
-                <FileInput label="Layout of Work Doc" accept=".pdf" onChange={e => handleDocUpload('layout', e.target.files[0])} />
-                <FileInput label="Map Document" accept=".pdf" onChange={e => handleDocUpload('map', e.target.files[0])} />
-                <FileInput label="Khasra B1 Document" accept=".pdf" onChange={e => handleDocUpload('khasra', e.target.files[0])} />
-                <FileInput label="GP Prastav Proposal" accept=".pdf" onChange={e => handleDocUpload('gpProposal', e.target.files[0])} />
-                <FileInput label="Site Plan Document" accept=".pdf" onChange={e => handleDocUpload('sitePlan', e.target.files[0])} />
-                <FileInput label="Final Proposal Document" accept=".pdf" onChange={e => handleDocUpload('finalProposal', e.target.files[0])} />
-                <FileInput label="Additional Documents" accept=".pdf" onChange={e => handleDocUpload('additional', e.target.files[0])} />
-              </div>
-            </div>
-
-            {/* --- SECTION 4: Geofencing --- */}
-            <div>
-              <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">4. Strict Location Geofencing</h4>
-              
-              <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-6 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-sm">
-                <span className="text-4xl text-red-500 mt-1">⚠️</span>
-                <div>
-                  <h5 className="text-red-700 font-black uppercase tracking-widest mb-2">Crucial Registration Step</h5>
-                  <p className="text-sm font-bold text-red-600/80 leading-relaxed">
-                    The GPS coordinates captured below will be <span className="text-red-700 font-black border-b border-red-300">permanently registered</span> as the official project site. Without a GPS match in the future, all updates will be blocked by the system.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 md:w-1/2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Initial Site Geo-Tag Photo <span className="text-red-500">*</span></label>
-                <div className="relative flex items-center">
-                  <input type="file" accept="image/*" capture="environment" required onChange={handlePhotoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  <div className={`w-full flex items-center justify-between px-5 py-4 rounded-full border-2 ${formData.docs.geo ? 'border-emerald-400 bg-emerald-50' : 'border-red-200 bg-white'} text-sm font-bold text-slate-500 transition-all shadow-sm`}>
-                    <span className={`truncate ${formData.docs.geo ? 'text-emerald-700' : ''}`}>{formData.docs.geo ? `Location Captured Successfully` : 'Tap to Open Camera & Capture Location...'}</span>
-                    <span className="text-2xl">{formData.docs.geo ? '✅' : '📸'}</span>
+                  <div className="space-y-1.5 relative z-10">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Financial Year</label>
+                    <CustomDropdown placeholder="Select Year" value={formData.financialYear} onChange={v => handleInputChange('financialYear', v)} options={uniqueFinYears} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposal Date</label>
+                    <input type="date" value={formData.proposalDate} onChange={e => handleInputChange('proposalDate', e.target.value)} className={inputClass} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Proposal Letter No.</label>
+                    <input type="text" placeholder="e.g. PR-2026-X" value={formData.proposalLetterNo} onChange={e => handleInputChange('proposalLetterNo', e.target.value)} className={inputClass} />
                   </div>
                 </div>
-                {geoTagData && <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest pl-4 mt-2 animate-pulse">{geoTagData}</p>}
-              </div>
-            </div>
 
-            <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="space-y-1.5 mt-6">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Objective / Remarks</label>
+                  <textarea rows="3" placeholder="Brief description of the work objective..." value={formData.remarks} onChange={e => handleInputChange('remarks', e.target.value)} className={`${inputClass} rounded-2xl resize-none py-4`}></textarea>
+                </div>
+              </div>
+            )}
+
+            {/* --- STEP 2: EXECUTION DETAILS --- */}
+            {currentStep === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
+                <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">2. Execution Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Executing Department <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.executingDepartment} onChange={e => handleInputChange('executingDepartment', e.target.value)} placeholder="e.g. PWD" className={inputClass} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Executing Agency <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.executingAgency} onChange={e => handleInputChange('executingAgency', e.target.value)} placeholder="e.g. EduBuild Pvt" className={inputClass} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Duration (Days)</label>
+                    <input type="number" min="1" value={formData.duration} onChange={e => handleInputChange('duration', e.target.value)} placeholder="e.g. 180" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- STEP 3: DOCUMENTATION SETUP --- */}
+            {currentStep === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
+                <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">3. Documentation Setup</h4>
+                
+                {/* Radio Toggle for TS */}
+                <div className="bg-[#451db3]/5 p-5 rounded-2xl border border-[#451db3]/10 mb-6">
+                  <p className="text-sm font-bold text-slate-700 mb-3">Is there a Technical Sanction for this project?</p>
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.hasTS === 'Yes' ? 'border-[#451db3]' : 'border-slate-300'}`}>
+                        {formData.hasTS === 'Yes' && <div className="w-2.5 h-2.5 rounded-full bg-[#451db3]"></div>}
+                      </div>
+                      <input type="radio" className="hidden" checked={formData.hasTS === 'Yes'} onChange={() => handleInputChange('hasTS', 'Yes')} />
+                      <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900">Yes, Available</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.hasTS === 'No' ? 'border-[#451db3]' : 'border-slate-300'}`}>
+                        {formData.hasTS === 'No' && <div className="w-2.5 h-2.5 rounded-full bg-[#451db3]"></div>}
+                      </div>
+                      <input type="radio" className="hidden" checked={formData.hasTS === 'No'} onChange={() => handleInputChange('hasTS', 'No')} />
+                      <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900">No, Pending</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Document Grid */}
+                <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-opacity duration-300 ${formData.hasTS === 'No' ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                  <FileInput label="Proposal Letter" required={true} accept=".pdf" onChange={e => handleDocUpload('proposalLetter', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Technical Sanction (TS)" required={formData.hasTS === 'Yes'} accept=".pdf" onChange={e => handleDocUpload('ts', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Administrative Sanction (AS)" accept=".pdf" onChange={e => handleDocUpload('as', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Utility Certificate (UC)" accept=".pdf" onChange={e => handleDocUpload('uc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Completion Certificate (CC)" accept=".pdf" onChange={e => handleDocUpload('cc', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Layout of Work Doc" accept=".pdf" onChange={e => handleDocUpload('layout', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Map Document" accept=".pdf" onChange={e => handleDocUpload('map', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Khasra B1 Document" accept=".pdf" onChange={e => handleDocUpload('khasra', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="GP Prastav Proposal" accept=".pdf" onChange={e => handleDocUpload('gpProposal', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Site Plan Document" accept=".pdf" onChange={e => handleDocUpload('sitePlan', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Final Proposal Document" accept=".pdf" onChange={e => handleDocUpload('finalProposal', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                  <FileInput label="Additional Documents" accept=".pdf" onChange={e => handleDocUpload('additional', e.target.files[0])} disabled={formData.hasTS === 'No'} />
+                </div>
+              </div>
+            )}
+
+            {/* --- STEP 4: GEOFENCING --- */}
+            {currentStep === 4 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
+                <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">4. Strict Location Geofencing</h4>
+                
+                <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-6 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-sm">
+                  <span className="text-4xl text-red-500 mt-1">⚠️</span>
+                  <div>
+                    <h5 className="text-red-700 font-black uppercase tracking-widest mb-2">Crucial Registration Step</h5>
+                    <p className="text-sm font-bold text-red-600/80 leading-relaxed">
+                      The GPS coordinates captured below will be <span className="text-red-700 font-black border-b border-red-300">permanently registered</span> as the official project site. Without a GPS match in the future, all updates will be blocked by the system.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 md:w-1/2">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Initial Site Geo-Tag Photo <span className="text-red-500">*</span></label>
+                  <div className="relative flex items-center">
+                    <input type="file" accept="image/*" capture="environment" required onChange={handlePhotoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    <div className={`w-full flex items-center justify-between px-5 py-4 rounded-full border-2 ${formData.docs.geo ? 'border-emerald-400 bg-emerald-50' : 'border-red-200 bg-white'} text-sm font-bold text-slate-500 transition-all shadow-sm`}>
+                      <span className={`truncate ${formData.docs.geo ? 'text-emerald-700' : ''}`}>{formData.docs.geo ? `Location Captured Successfully` : 'Tap to Open Camera & Capture Location...'}</span>
+                      <span className="text-2xl">{formData.docs.geo ? '✅' : '📸'}</span>
+                    </div>
+                  </div>
+                  {geoTagData && <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest pl-4 mt-2 animate-pulse">{geoTagData}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
               <button 
                 type="button" 
-                onClick={() => setView('list')} 
-                className="w-full sm:w-auto px-8 py-4 rounded-full text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+                onClick={() => {
+                  if (currentStep === 1) setView('list');
+                  else handleBack();
+                }} 
+                className="px-8 py-3.5 rounded-full text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors"
               >
-                ← Cancel Creation
+                {currentStep === 1 ? 'Cancel Creation' : '← Back'}
               </button>
-              <button 
-                type="submit" 
-                className="w-full sm:w-auto px-12 py-4 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-sm font-bold shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:-translate-y-0.5 transition-all"
-              >
-                Register & Geofence Project ✓
-              </button>
+              
+              {currentStep < 4 ? (
+                <button 
+                  type="button" 
+                  onClick={handleNext}
+                  className="px-10 py-3.5 rounded-full bg-[#451db3] text-white text-sm font-bold shadow-[0_8px_20px_rgba(69,29,179,0.25)] hover:bg-[#3a1796] hover:-translate-y-0.5 transition-all"
+                >
+                  Continue Next Step →
+                </button>
+              ) : (
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="px-10 py-3.5 rounded-full bg-green-500 text-white text-sm font-bold shadow-[0_8px_20px_rgba(34,197,94,0.3)] hover:bg-green-600 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Registering...' : 'Register & Geofence Project ✓'}
+                </button>
+              )}
             </div>
           </form>
         </div>

@@ -65,9 +65,9 @@ const DetailItem = ({ label, value, highlight = false }) => (
 );
 
 // --- REUSABLE DOC STATUS ITEM ---
-const DocStatus = ({ label, available }) => (
+const DocStatus = ({ label, available, required = false }) => (
   <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-    <span className="text-xs font-bold text-slate-700">{label}</span>
+    <span className="text-xs font-bold text-slate-700">{label} {required && <span className="text-red-500">*</span>}</span>
     {available ? (
       <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Available ✓</span>
     ) : (
@@ -92,16 +92,18 @@ export default function ProjectVerify() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterFinYear, setFilterFinYear] = useState('');
+  const [filterSector, setFilterSector] = useState('');
 
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
 
-  // Mock Database: Projects pending CEO Verification (Expanded with details)
+  // Mock Database: Projects pending CEO Verification (Expanded with requested details)
   const [projects, setProjects] = useState([
-    { id: 1, workId: 'WRK-2026-901', workName: 'Sector 4 Water Purification', district: 'Bilaspur', sector: 'Infrastructure', subSector: 'Water Supply', relatedDepartment: 'Janpad', proposedBy: 'Janpad', financialYear: '2026-2027', estCost: 1500000, executingDepartment: 'PHE', executingAgency: 'AquaFlow Ind', workPriority: 'High', remarks: 'Critical water shortage reported.', proposalLetterNo: 'PR-2026-045', proposalDate: '2026-05-10', duration: '180', status: 'Pending Verification', docs: { ts: true, as: true, uc: false, cc: false, geo: true, proposalLetter: true, map: true } },
-    { id: 2, workId: 'WRK-2026-902', workName: 'Rural High School Addition', district: 'Bilaspur', sector: 'Education', subSector: 'Construction', relatedDepartment: 'Gram Panchayat', proposedBy: 'Gram Panchayat', financialYear: '2026-2027', estCost: 2800000, executingDepartment: 'PWD', executingAgency: 'EduBuild Pvt', workPriority: 'Medium', remarks: 'Adding 4 new classrooms.', proposalLetterNo: 'PR-2026-112', proposalDate: '2026-06-01', duration: '240', status: 'Pending Verification', docs: { ts: true, as: false, uc: false, cc: false, geo: true, proposalLetter: true, map: false } },
-    { id: 3, workId: 'WRK-2026-903', workName: 'Community Dispensary Block C', district: 'Bilaspur', sector: 'Health', subSector: 'Medical', relatedDepartment: 'Janpad', proposedBy: 'Janpad', financialYear: '2025-2026', estCost: 950000, executingDepartment: 'CGMSC', executingAgency: 'MediCorp Builders', workPriority: 'High', remarks: 'Sanctioned for immediate release.', proposalLetterNo: 'PR-2025-88', proposalDate: '2025-11-20', duration: '90', status: 'Approved', docs: { ts: true, as: true, uc: true, cc: true, geo: true, proposalLetter: true, map: true } },
-    { id: 4, workId: 'WRK-2026-904', workName: 'Panchayat Connecting Road', district: 'Bilaspur', sector: 'Infrastructure', subSector: 'Roads', relatedDepartment: 'Gram Panchayat', proposedBy: 'Gram Panchayat', financialYear: '2026-2027', estCost: 3200000, executingDepartment: 'PWD', executingAgency: 'Roadways Ltd', workPriority: 'Medium', remarks: 'Budget exceeds district phase limits. Reduce scope.', proposalLetterNo: 'PR-2026-002', proposalDate: '2026-01-15', duration: '300', status: 'Rejected', docs: { ts: false, as: false, uc: false, cc: false, geo: true, proposalLetter: true, map: false } },
+    { id: 1, workId: 'WRK-2026-901', workName: 'Sector 4 Water Purification', district: 'Bilaspur', sector: 'Infrastructure', subSector: 'Water Supply', relatedDepartment: 'Janpad', proposedBy: 'Janpad', financialYear: '2026-2027', estCost: 1500000, executingDepartment: 'PHE', executingAgency: 'AquaFlow Ind', workPriority: 'High', remarks: 'Critical water shortage reported.', proposalLetterNo: 'PR-2026-045', proposalDate: '2026-05-10', duration: '180', status: 'Pending Verification', docs: { proposalLetter: true, ts: true, as: true, uc: false, cc: false, layout: true, map: true, khasra: false, gpProposal: false, sitePlan: true, finalProposal: false, additional: false, geo: true } },
+    { id: 2, workId: 'WRK-2026-902', workName: 'Rural High School Addition', district: 'Bilaspur', sector: 'Education', subSector: 'Construction', relatedDepartment: 'Gram Panchayat', proposedBy: 'Gram Panchayat', financialYear: '2026-2027', estCost: 2800000, executingDepartment: 'PWD', executingAgency: 'EduBuild Pvt', workPriority: 'Medium', remarks: 'Adding 4 new classrooms.', proposalLetterNo: 'PR-2026-112', proposalDate: '2026-06-01', duration: '240', status: 'Pending Verification', docs: { proposalLetter: true, ts: true, as: false, uc: false, cc: false, layout: true, map: false, khasra: true, gpProposal: true, sitePlan: false, finalProposal: true, additional: true, geo: true } },
+    { id: 3, workId: 'WRK-2026-903', workName: 'Community Dispensary Block C', district: 'Bilaspur', sector: 'Health', subSector: 'Medical', relatedDepartment: 'Janpad', proposedBy: 'Janpad', financialYear: '2025-2026', estCost: 950000, executingDepartment: 'CGMSC', executingAgency: 'MediCorp Builders', workPriority: 'High', remarks: 'Sanctioned for immediate release.', proposalLetterNo: 'PR-2025-88', proposalDate: '2025-11-20', duration: '90', status: 'Approved', docs: { proposalLetter: true, ts: true, as: true, uc: true, cc: true, layout: false, map: true, khasra: false, gpProposal: true, sitePlan: true, finalProposal: true, additional: false, geo: true } },
+    { id: 4, workId: 'WRK-2026-904', workName: 'Panchayat Connecting Road', district: 'Bilaspur', sector: 'Infrastructure', subSector: 'Roads', relatedDepartment: 'Gram Panchayat', proposedBy: 'Gram Panchayat', financialYear: '2026-2027', estCost: 3200000, executingDepartment: 'PWD', executingAgency: 'Roadways Ltd', workPriority: 'Medium', remarks: 'Budget exceeds district phase limits. Reduce scope.', proposalLetterNo: 'PR-2026-002', proposalDate: '2026-01-15', duration: '300', status: 'Rejected', docs: { proposalLetter: true, ts: false, as: false, uc: false, cc: false, layout: false, map: false, khasra: true, gpProposal: false, sitePlan: false, finalProposal: false, additional: false, geo: true } },
   ]);
 
   const showToast = (msg, type = 'success') => {
@@ -110,10 +112,18 @@ export default function ProjectVerify() {
   };
 
   // --- FILTERING & PAGINATION LOGIC ---
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterDepartment, filterFinYear, filterSector]);
+
   const filteredProjects = projects.filter(p => {
-    const matchesSearch = p.workName.toLowerCase().includes(searchQuery.toLowerCase()) || p.workId.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === '' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = p.workName.toLowerCase().includes(searchLower) || p.workId.toLowerCase().includes(searchLower);
+    const matchesDept = filterDepartment === '' || p.relatedDepartment === filterDepartment;
+    const matchesFinYear = filterFinYear === '' || p.financialYear === filterFinYear;
+    const matchesSector = filterSector === '' || p.sector === filterSector;
+    
+    return matchesSearch && matchesDept && matchesFinYear && matchesSector;
   });
 
   const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
@@ -121,6 +131,11 @@ export default function ProjectVerify() {
 
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
+
+  // Dropdown Extraction
+  const uniqueFinYears = [...new Set(projects.map(p => p.financialYear))];
+  const uniqueSectors = [...new Set(projects.map(p => p.sector))];
+  const uniqueDepartments = [...new Set(projects.map(p => p.relatedDepartment))];
 
   // --- ACTIONS ---
   const handleOpenReview = (project) => {
@@ -208,23 +223,29 @@ export default function ProjectVerify() {
       {view === 'list' && (
         <>
           <div className="bg-white/60 backdrop-blur-2xl p-5 rounded-3xl shadow-[0_4px_30px_rgba(69,29,179,0.03)] flex flex-col md:flex-row gap-5 items-start md:items-center z-20 relative w-full">
-            <div className="flex-1 w-full relative">
+            <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0 ml-2 hidden md:block">Search & Filters</span>
+            
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
               <input 
                 type="text" 
-                placeholder="Search by Work ID or Project Name..." 
+                placeholder="Search Work ID or Name..." 
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className={inputClass} 
               />
+              <CustomDropdown placeholder="All Departments" value={filterDepartment} onChange={setFilterDepartment} options={uniqueDepartments} />
+              <CustomDropdown placeholder="All Financial Years" value={filterFinYear} onChange={setFilterFinYear} options={uniqueFinYears} />
+              <CustomDropdown placeholder="All Sectors" value={filterSector} onChange={setFilterSector} options={uniqueSectors} />
             </div>
-            <div className="w-full md:w-64 shrink-0">
-              <CustomDropdown 
-                placeholder="All Statuses"
-                value={statusFilter}
-                onChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
-                options={['Pending Verification', 'Approved', 'Rejected']}
-              />
-            </div>
+
+            {(searchQuery || filterDepartment || filterFinYear || filterSector) && (
+              <button 
+                onClick={() => { setSearchQuery(''); setFilterDepartment(''); setFilterFinYear(''); setFilterSector(''); }}
+                className="text-xs font-bold text-red-500 hover:text-white hover:bg-red-500 px-5 py-3.5 rounded-full transition-all shrink-0 bg-red-50 shadow-sm"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
           <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-in fade-in z-10 relative w-full">
@@ -232,55 +253,51 @@ export default function ProjectVerify() {
               <table className="min-w-full text-left border-collapse whitespace-nowrap">
                 <thead className="bg-[#451db3]/15 border-b border-[#451db3]/20">
                   <tr>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-16">S.No</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Project Details</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Proposed By</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-right">Est. Cost (₹)</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Status</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest w-12">S.No</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work ID</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Work Name</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Sector</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Sub Sector</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Related Dept</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Est. Cost (₹)</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Source of Proposal</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Fin. Year</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest">Exec. Dept</th>
+                    <th className="px-5 py-5 text-[10px] font-black text-[#451db3] uppercase tracking-widest text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {currentData.length === 0 ? (
-                    <tr><td colSpan="6" className="px-8 py-12 text-center text-slate-500 font-bold">No projects match your search.</td></tr>
+                    <tr><td colSpan="11" className="px-8 py-12 text-center text-slate-500 font-bold">No projects match your search.</td></tr>
                   ) : (
                     currentData.map((proj, index) => (
                       <tr key={proj.id} className="hover:bg-[#451db3]/5 transition-colors group">
-                        <td className="px-6 py-5 font-bold text-slate-500 align-middle">
-                          {(currentPage - 1) * itemsPerPage + index + 1}
-                        </td>
-                        <td className="px-6 py-5 align-middle">
-                          <p className="font-black text-slate-900 text-sm">{proj.workName}</p>
-                          <p className="text-[11px] font-mono font-bold text-slate-400 mt-1">{proj.workId} • {proj.financialYear}</p>
-                        </td>
-                        <td className="px-6 py-5 align-middle">
-                          <p className="text-sm font-bold text-slate-700">{proj.proposedBy}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{proj.sector}</p>
-                        </td>
-                        <td className="px-6 py-5 align-middle text-right">
-                          <p className="font-black text-[#451db3] text-sm">{formatCurrency(proj.estCost)}</p>
-                        </td>
-                        <td className="px-6 py-5 text-center align-middle">
-                          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                            proj.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-                            proj.status === 'Rejected' ? 'bg-red-50 text-red-600 border-red-200' :
-                            'bg-amber-50 text-amber-600 border-amber-200'
-                          }`}>
-                            {proj.status}
+                        <td className="px-5 py-5 font-bold text-slate-500 align-middle">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                        <td className="px-5 py-5 font-mono font-bold text-slate-700 align-middle">{proj.workId}</td>
+                        <td className="px-5 py-5 font-black text-slate-900 text-sm align-middle">{proj.workName}</td>
+                        <td className="px-5 py-5 font-medium text-slate-600 align-middle">{proj.sector}</td>
+                        <td className="px-5 py-5 font-medium text-slate-600 align-middle">{proj.subSector}</td>
+                        <td className="px-5 py-5 align-middle">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white text-slate-600 border border-slate-200 group-hover:border-[#451db3]/30 group-hover:text-[#451db3] transition-colors">
+                            {proj.relatedDepartment}
                           </span>
                         </td>
-                        <td className="px-6 py-5 text-center align-middle">
+                        <td className="px-5 py-5 font-black text-[#451db3] text-sm align-middle">{formatCurrency(proj.estCost)}</td>
+                        <td className="px-5 py-5 font-bold text-slate-700 align-middle">{proj.proposedBy}</td>
+                        <td className="px-5 py-5 font-bold text-slate-700 align-middle">{proj.financialYear}</td>
+                        <td className="px-5 py-5 font-medium text-slate-600 align-middle">{proj.executingDepartment}</td>
+                        <td className="px-5 py-5 text-center align-middle">
                           {proj.status === 'Pending Verification' ? (
                             <button 
                               onClick={() => handleOpenReview(proj)}
-                              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-[10px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all shadow-md"
+                              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#451db3] to-[#5b2bd9] text-white text-[10px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all shadow-md whitespace-nowrap"
                             >
-                              Review & Action
+                              Review
                             </button>
                           ) : (
                             <button 
                               onClick={() => handleOpenReview(proj)}
-                              className="bg-white border border-slate-200 text-slate-600 hover:text-white hover:bg-[#451db3] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                              className="bg-white border border-slate-200 text-slate-600 hover:text-white hover:bg-[#451db3] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm whitespace-nowrap"
                             >
                               View Details
                             </button>
@@ -318,46 +335,36 @@ export default function ProjectVerify() {
             <div>
               <p className="text-[10px] font-black text-[#451db3] uppercase tracking-widest mb-1">Proposal Review Master</p>
               <h3 className="text-3xl font-black text-slate-900">{activeProject.workName}</h3>
-              <p className="text-sm font-bold text-slate-500 font-mono mt-2">{activeProject.workId} • {activeProject.financialYear}</p>
+              <p className="text-sm font-bold text-slate-500 font-mono mt-2">{activeProject.workId}</p>
             </div>
             <div className="bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-100 text-right min-w-[200px]">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Proposed Cost</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estimated Amount</p>
               <p className="text-3xl font-black text-[#451db3]">{formatCurrency(activeProject.estCost)}</p>
             </div>
           </div>
 
-          {/* Section 1: General Info */}
-          <div>
-            <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">1. General Information</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-6">
-              <DetailItem label="District" value={activeProject.district} />
-              <DetailItem label="Work Priority" value={activeProject.workPriority} />
-              <DetailItem label="Sector" value={activeProject.sector} />
-              <DetailItem label="Sub Sector" value={activeProject.subSector} />
-              <DetailItem label="Related Dept" value={activeProject.relatedDepartment} />
-              <DetailItem label="Proposed By" value={activeProject.proposedBy} />
-              <DetailItem label="Proposal Date" value={activeProject.proposalDate} />
-              <DetailItem label="Proposal Letter No" value={activeProject.proposalLetterNo} />
-            </div>
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Objective / Remarks Provided</p>
-              <p className="text-sm font-medium text-slate-700 leading-relaxed">{activeProject.remarks || <span className="italic text-slate-400">No original remarks provided.</span>}</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <DetailItem label="Proposed By *" value={activeProject.proposedBy} />
+            <DetailItem label="Work Priority *" value={activeProject.workPriority} />
+            <DetailItem label="District (Auto)" value={activeProject.district} />
+            <DetailItem label="Sector" value={activeProject.sector} />
+            <DetailItem label="Sub Sector" value={activeProject.subSector} />
+            <DetailItem label="Related Department" value={activeProject.relatedDepartment} />
+            <DetailItem label="Financial Year" value={activeProject.financialYear} />
+            <DetailItem label="Proposal Date" value={activeProject.proposalDate} />
+            <DetailItem label="Proposal Letter No." value={activeProject.proposalLetterNo} />
+            <DetailItem label="Executing Department *" value={activeProject.executingDepartment} />
+            <DetailItem label="Executing Agency *" value={activeProject.executingAgency} />
+            <DetailItem label="Duration (Days)" value={activeProject.duration} />
           </div>
 
-          {/* Section 2: Execution Details */}
-          <div>
-            <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">2. Execution Details</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-              <DetailItem label="Executing Department" value={activeProject.executingDepartment} />
-              <DetailItem label="Executing Agency" value={activeProject.executingAgency} />
-              <DetailItem label="Duration (Days)" value={activeProject.duration} />
-            </div>
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Objective / Remarks Provided</p>
+            <p className="text-sm font-medium text-slate-700 leading-relaxed">{activeProject.remarks || <span className="italic text-slate-400">No original remarks provided.</span>}</p>
           </div>
 
-          {/* Section 3: Docs & Geofencing */}
           <div>
-            <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">3. Documentation & Geofencing Status</h4>
+            <h4 className="text-xs font-black text-[#451db3] uppercase tracking-widest mb-6 border-b border-[#451db3]/10 pb-3">Documentation & Geofencing Status</h4>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
               {/* Geofence Display */}
@@ -366,7 +373,7 @@ export default function ProjectVerify() {
                   <>
                     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000&auto=format&fit=crop')] opacity-10 bg-cover bg-center"></div>
                     <span className="text-4xl relative z-10 mb-2">📍</span>
-                    <p className="text-sm font-black text-slate-800 uppercase tracking-widest relative z-10">Geofence Active</p>
+                    <p className="text-sm font-black text-slate-800 uppercase tracking-widest relative z-10">Initial Site Geo-Tag Photo *</p>
                     <p className="text-[10px] font-bold text-emerald-600 font-mono mt-2 bg-emerald-50 px-3 py-1 rounded border border-emerald-200 relative z-10 shadow-sm">Lat: 22.0796, Long: 82.1391</p>
                   </>
                 ) : (
@@ -379,12 +386,18 @@ export default function ProjectVerify() {
 
               {/* Documentation List */}
               <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <DocStatus label="Proposal Letter" available={activeProject.docs?.proposalLetter} />
-                <DocStatus label="Technical Sanction (TS)" available={activeProject.docs?.ts} />
+                <DocStatus label="Proposal Letter" required={true} available={activeProject.docs?.proposalLetter} />
+                <DocStatus label="Technical Sanction (TS)" required={true} available={activeProject.docs?.ts} />
                 <DocStatus label="Administrative Sanction (AS)" available={activeProject.docs?.as} />
                 <DocStatus label="Utility Certificate (UC)" available={activeProject.docs?.uc} />
                 <DocStatus label="Completion Certificate (CC)" available={activeProject.docs?.cc} />
+                <DocStatus label="Layout of Work Doc" available={activeProject.docs?.layout} />
                 <DocStatus label="Map Document" available={activeProject.docs?.map} />
+                <DocStatus label="Khasra B1 Document" available={activeProject.docs?.khasra} />
+                <DocStatus label="GP Prastav Proposal" available={activeProject.docs?.gpProposal} />
+                <DocStatus label="Site Plan Document" available={activeProject.docs?.sitePlan} />
+                <DocStatus label="Final Proposal Document" available={activeProject.docs?.finalProposal} />
+                <DocStatus label="Additional Documents" available={activeProject.docs?.additional} />
               </div>
             </div>
           </div>
